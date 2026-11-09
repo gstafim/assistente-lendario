@@ -98,7 +98,7 @@
 
   .overlay { position: fixed; inset: 0; background: rgba(10, 6, 30, .72); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
   .overlay.hidden { display: none; }
-  .modal { background: #fff; color: var(--ink); border-radius: 24px; padding: 26px; max-width: 640px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; text-align: center; animation: enter .4s ease-out; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .modal { background: #fff; color: var(--ink); border-radius: 24px; padding: 22px 24px; max-width: 640px; width: 100%; overflow: hidden; text-align: center; animation: enter .4s ease-out; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
   @keyframes enter { from { opacity: 0; transform: translateY(20px) scale(.96); } }
   .modal h1 { font-size: clamp(1.7rem, 5vw, 2.5rem); color: var(--purple); line-height: 1.1; }
   .modal .tag { display: block; font-size: .85rem; color: var(--pink); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
@@ -121,13 +121,40 @@
   .btn:hover { transform: translateY(-3px) scale(1.03); }
   .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8336a; }
   @keyframes pulse { 50% { box-shadow: 0 6px 0 #b8336a, 0 0 0 12px rgba(255,61,127,.15); } }
-  #songBox { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: min(356px, calc(100vw - 32px)); background: #000; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.6); border: 3px solid var(--yellow); animation: enter .4s ease-out; }
-  #songBox .bar { display: flex; justify-content: space-between; align-items: center; background: var(--yellow); color: var(--ink); font-weight: bold; font-size: .85rem; padding: 4px 6px 6px 10px; }
-  #songBox button { border: none; background: rgba(0,0,0,.12); border-radius: 8px; cursor: pointer; font-weight: bold; padding: 2px 8px; font-family: inherit; }
-  #songBox iframe { display: block; width: 100%; aspect-ratio: 16 / 9; min-height: 190px; border: 0; }
   .final { font-size: 2.4rem; font-weight: bold; color: var(--pink); margin: 6px 0; }
   .stats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 20px; }
   .stats div { background: #f5f0ff; padding: 8px 12px; border-radius: 10px; font-weight: bold; font-size: .9rem; }
+  @media (max-height: 820px), (max-width: 560px) {
+    .modal { padding: 16px 18px; border-radius: 18px; }
+    .modal h1 { font-size: clamp(1.4rem, 4.5vw, 2rem); }
+    .modal .big { font-size: 2.6rem; }
+    .modal p { margin: 6px 0; font-size: .92rem; line-height: 1.4; }
+    .story { padding: 8px 12px; margin: 8px 0; }
+    .rules { margin: 8px 0 10px; gap: 6px; }
+    .rule { padding: 6px; font-size: .8rem; }
+    .rule b { font-size: 1.1rem; }
+    .final { font-size: 1.9rem; }
+    .stats { margin: 6px 0 12px; }
+    .stats div { padding: 5px 9px; font-size: .8rem; }
+    .btn { padding: 12px 26px; font-size: 1.05rem; }
+  }
+  .keys-touch { display: none; }
+  @media (hover: none) and (pointer: coarse) { .keys-desk { display: none; } .keys-touch { display: block; } }
+  @media (max-height: 700px) { .modal .big { display: none; } }
+  @media (max-height: 620px) {
+    .modal { padding: 12px 14px; }
+    .modal h1 { font-size: 1.3rem; }
+    .modal p, .story p { font-size: .82rem; line-height: 1.35; }
+    .story { margin: 6px 0; padding: 6px 10px; }
+    .rules { margin: 6px 0 8px; gap: 5px; }
+    .rule { font-size: .74rem; padding: 5px; }
+    .rule b { font-size: .95rem; margin: 0; }
+    .btn { padding: 10px 22px; }
+  }
+  @media (max-width: 560px) {
+    .rules { grid-template-columns: 1fr 1fr; }
+    .modal .tag { font-size: .72rem; }
+  }
   #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
   footer { color: rgba(255,255,255,.5); font-size: .8rem; margin-top: 14px; text-align: center; }
 </style>
@@ -292,7 +319,6 @@ const sfx = {
   wrong: () => beep([220, 160], 0.16, 'sawtooth', 0.07),
   hit: () => beep([300, 600, 900, 1200], 0.06, 'square', 0.07),
   door: () => beep([440, 554, 659], 0.1, 'triangle', 0.08),
-  win: () => beep([523, 659, 784, 1047, 1319], 0.14, 'triangle', 0.09),
   lose: () => beep([392, 330, 262, 196], 0.2, 'triangle', 0.09)
 };
 
@@ -304,6 +330,34 @@ const MUSIC = {
        lead: [69,72,76,72,81,76,72,76, 69,72,77,72,81,77,72,77, 71,74,79,74,83,79,74,79, 68,71,76,71,80,76,71,76] }
 };
 const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+
+function tone(n, t, d, type, vol) {
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = midi(n);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + d + 0.02);
+}
+// fanfarra de vitória original: cada parte é uma lista de [nota MIDI, duração em tempos]
+const VICTORY = {
+  bpm: 160,
+  parts: [
+    { type: 'square', vol: 0.05, notes: [[67,.5],[72,.5],[76,.5],[79,.5],[84,1],[79,1], [81,.5],[77,.5],[81,.5],[84,.5],[86,1.5],[84,.5], [83,.5],[79,.5],[83,.5],[86,.5],[88,1],[86,.5],[83,.5], [84,3]] },
+    { type: 'square', vol: 0.025, notes: [[0,12],[76,3]] },
+    { type: 'square', vol: 0.025, notes: [[0,12],[79,3]] },
+    { type: 'triangle', vol: 0.08, notes: [[48,1],[55,1],[48,1],[55,1], [53,1],[60,1],[53,1],[60,1], [55,1],[62,1],[55,1],[62,1], [48,3]] },
+    { type: 'triangle', vol: 0.05, notes: [[0,.5],[72,.25],[0,1.25],[72,.25],[0,1.75], [0,.5],[77,.25],[0,1.25],[77,.25],[0,1.75], [0,.5],[79,.25],[0,1.25],[79,.25],[0,1.75]] }
+  ]
+};
+function playVictory() {
+  if (muted) return;
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  const beat = 60 / VICTORY.bpm, t0 = audioCtx.currentTime + 0.05;
+  VICTORY.parts.forEach(part => {
+    let t = t0;
+    part.notes.forEach(([n, b]) => { if (n) tone(n, t, b * beat * 0.95, part.type, part.vol); t += b * beat; });
+  });
+}
 let mStep = 0, mNext = 0;
 function musicTick(now) {
   if (muted || G.mode !== 'play' || !audioCtx) return;
@@ -1258,16 +1312,16 @@ function showStart() {
   overlay(
     '<span class="tag">Uma aventura de dados</span><h1>O Assistente Lendário</h1>' +
     '<div class="big">🧑‍💼📊</div>' +
-    '<div class="story"><p><b>A história:</b> você acaba de ser contratado como assistente administrativo da <b>Papelaria Horizonte</b>. ' +
-    'No seu primeiro dia, o <b>Caos dos Dados</b> 👾 invadiu o sistema, bagunçou as planilhas e soltou bugs <b>#REF!</b> pelo escritório.</p>' +
-    '<p>Atravesse o escritório resolvendo os desafios de dados (<b>Fase 1</b>) e derrote o Caos dos Dados na sala dele (<b>Fase 2</b>).</p></div>' +
+    '<div class="story"><p>Você é o novo assistente administrativo da <b>Papelaria Horizonte</b>. O <b>Caos dos Dados</b> 👾 bagunçou as planilhas e soltou bugs <b>#REF!</b> pelo escritório. ' +
+    'Resolva os desafios de dados (<b>Fase 1</b>) e derrote o chefão na sala dele (<b>Fase 2</b>)!</p></div>' +
     '<div class="rules">' +
     '<div class="rule"><b>⬆️</b>Pule por baixo e <strong>bata a cabeça</strong> no bloco com a resposta certa</div>' +
     '<div class="rule"><b>🔓</b>Cada acerto abre o portão para seguir</div>' +
     '<div class="rule"><b>❤️❤️❤️</b>3 vidas. Errar, cair no buraco ou levar dano tira uma</div>' +
     '<div class="rule"><b>👟</b>Pule em cima dos bugs para derrotá-los (+50)</div>' +
     '</div>' +
-    '<p><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> para andar, <kbd>↑</kbd> <kbd>W</kbd> ou <kbd>Espaço</kbd> para pular, <kbd>P</kbd> para pausar. No celular use os botões abaixo do jogo.</p>' +
+    '<p class="keys-desk"><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> para andar, <kbd>↑</kbd> <kbd>W</kbd> ou <kbd>Espaço</kbd> para pular, <kbd>P</kbd> para pausar.</p>' +
+    '<p class="keys-touch">Use os botões ◀ ▶ e PULAR abaixo do jogo.</p>' +
     '<button class="btn" id="ovBtn">▶ Começar a missão</button>',
     () => { newGame(); G.mode = 'play'; sfx.door(); }
   );
@@ -1291,13 +1345,13 @@ function endGame(won) {
   if (won) {
     const bonus = G.lives * 200;
     G.score += bonus; renderHud();
-    startConfetti(); showSong();
+    startConfetti(); playVictory();
     overlay(
       '<span class="tag">Missão cumprida</span><h1>Você é o Assistente Lendário!</h1><div class="big">🏆</div>' +
       '<p>O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>' +
       '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '<div>❤️ Bônus de vidas: +' + bonus + '</div></div>' +
       '<button class="btn" id="ovBtn">🔁 Jogar de novo</button>',
-      () => { stopConfetti(); hideSong(); newGame(); G.mode = 'play'; }
+      () => { stopConfetti(); newGame(); G.mode = 'play'; }
     );
   } else {
     overlay(
@@ -1309,18 +1363,6 @@ function endGame(won) {
     );
   }
 }
-
-/* música da vitória: player oficial do YouTube no canto da tela, começa sozinho */
-function showSong() {
-  hideSong();
-  const box = document.createElement('div');
-  box.id = 'songBox';
-  box.innerHTML = '<div class="bar"><span>🎵 Harry Styles - Kiwi</span><button title="Fechar">✕</button></div>' +
-    '<iframe src="https://www.youtube-nocookie.com/embed/9wg3v-01yKQ?autoplay=1&playsinline=1" title="Harry Styles - Kiwi" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
-  box.querySelector('button').addEventListener('click', hideSong);
-  document.body.appendChild(box);
-}
-function hideSong() { const b = $('songBox'); if (b) b.remove(); }
 
 /* =========================================================
    CONFETES
