@@ -547,7 +547,7 @@ const TEXUGA_TIME = 15 * 60;
 function hitSecret(s) {
   if (s.used) { sfx.bonk(); s.bump = 10; return; }
   s.used = true; s.bump = 10;
-  G.star = { x: s.x + 6, y: s.y - 6, w: 28, h: 28, rise: 30, t: 0 };
+  G.star = { x: s.x + 6, y: s.y - 6, w: 28, h: 28, rise: 20, t: 0, vx: 0, vy: 0, stopX: s.x + 110 };
   beep([523, 784, 1047, 1568], 0.07, 'triangle', 0.08);
   burst(s.x + 20, s.y, ['#ffd23f', '#fff'], 14, 4);
 }
@@ -562,7 +562,13 @@ function updateStar(p) {
   const st = G.star;
   if (!st) return;
   st.t++;
-  if (st.rise > 0) { st.y -= 1.6; st.rise--; }
+  if (st.rise > 0) { st.y -= 1.6; st.rise--; if (st.rise === 0) { st.vx = 1.8; st.vy = -3; } }
+  else {
+    // sai do bloco, cai no chão ao lado e fica quicando baixinho até você pegar
+    st.vy += 0.3; st.y += st.vy;
+    if (st.x < st.stopX) st.x += st.vx;
+    if (st.y + st.h >= GY) { st.y = GY - st.h; st.vy = -5; }
+  }
   if (overlap(p, st)) { G.star = null; startTexuga(p); }
 }
 
