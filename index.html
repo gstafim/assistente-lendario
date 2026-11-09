@@ -412,8 +412,8 @@ function buildLevel1() {
   addGround(0, 10 * T);
   coinLine(4 * T, 420, 4);
   G.signs.push({ x: 2 * T, lines: ['← → andar', '↑ ou Espaço pular'] });
-  // EASTER EGG: bloco invisível que só aparece quando você bate a cabeça nele
-  G.solids.push({ x: 7 * T, y: 330, w: 40, h: 40, kind: 'secret', hidden: true });
+  // EASTER EGG: bloco da Texuga, bata a cabeça nele para soltar a estrela
+  G.solids.push({ x: 7 * T, y: 330, w: 40, h: 40, kind: 'secret', used: false, bump: 0 });
   G.star = null; G.gotStar = false;
   let x0 = 10 * T;
   PHASE1.forEach((q, i) => {
@@ -545,8 +545,8 @@ function burst(x, y, colors, n = 16, power = 5) {
 const TEXUGA_TIME = 15 * 60;
 
 function hitSecret(s) {
-  if (!s.hidden) { sfx.bonk(); s.bump = 10; return; }
-  s.hidden = false; s.bump = 10;
+  if (s.used) { sfx.bonk(); s.bump = 10; return; }
+  s.used = true; s.bump = 10;
   G.star = { x: s.x + 6, y: s.y - 6, w: 28, h: 28, rise: 30, t: 0 };
   beep([523, 784, 1047, 1568], 0.07, 'triangle', 0.08);
   burst(s.x + 20, s.y, ['#ffd23f', '#fff'], 14, 4);
@@ -556,8 +556,9 @@ function updateStar(p) {
   for (const s of G.solids) if (s.kind === 'secret' && s.bump > 0) s.bump--;
   // pista discreta: um brilhinho de vez em quando onde o bloco secreto está
   const sec = G.solids.find(s => s.kind === 'secret');
-  if (sec && sec.hidden && G.frame % 150 === 0)
-    G.parts.push({ x: sec.x + rand(8, 32), y: sec.y + rand(8, 32), vx: 0, vy: -0.3, life: 40, max: 40, c: '#fff8c4', s: 4, g: 0 });
+  if (sec && !sec.used && G.frame % 60 === 0)
+    for (let i = 0; i < 3; i++)
+      G.parts.push({ x: sec.x + rand(4, 36), y: sec.y + rand(4, 36), vx: rand(-0.3, 0.3), vy: -0.4, life: 45, max: 45, c: '#fff3a0', s: 6, g: 0 });
   const st = G.star;
   if (!st) return;
   st.t++;
@@ -641,8 +642,17 @@ function drawHelper(h) {
 }
 
 function drawSecret(s) {
-  if (s.hidden) return;
   const off = s.bump > 0 ? -Math.sin((10 - s.bump) / 10 * Math.PI) * 8 : 0;
+  if (!s.used) {
+    // bloco arco-íris com a Texuga, bem chamativo
+    ctx.fillStyle = 'rgba(255, 243, 160, .25)'; circle(s.x + 20, s.y + 20 + off, 30 + Math.sin(G.frame / 10) * 4);
+    ctx.fillStyle = 'hsl(' + (G.frame * 4 % 360) + ', 90%, 60%)'; rr(s.x, s.y + off, s.w, s.h, 7); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    drawBadger(s.x + 20, s.y + off + 31, 1, 0.62, false);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center';
+    ctx.fillText('⬆ pule aqui!', s.x + 20, s.y + off - 12 + Math.sin(G.frame / 12) * 3);
+    return;
+  }
   ctx.fillStyle = '#a16207'; rr(s.x, s.y + off, s.w, s.h, 6); ctx.fill();
   ctx.strokeStyle = '#713f12'; ctx.lineWidth = 3; ctx.stroke();
   ctx.fillStyle = '#713f12'; [[5, 5], [32, 5], [5, 32], [32, 32]].forEach(([dx, dy]) => ctx.fillRect(s.x + dx, s.y + off + dy, 3, 3));
