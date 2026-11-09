@@ -6,9 +6,6 @@
 <title>O Assistente Lendário</title>
 <style>
   :root {
-    --bg1: #1b1446;
-    --bg2: #3a1c71;
-    --card: #ffffff;
     --ink: #1d1b2f;
     --muted: #5b5875;
     --pink: #ff3d7f;
@@ -20,384 +17,248 @@
     --red: #ef4444;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
   body {
     font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-    background: radial-gradient(circle at 20% 10%, #5b2a9e 0%, transparent 40%),
-                radial-gradient(circle at 85% 90%, #b8336a 0%, transparent 40%),
-                linear-gradient(160deg, var(--bg1), var(--bg2));
-    background-attachment: fixed;
-    color: var(--ink);
+    background: radial-gradient(circle at 15% 0%, #4a2591 0%, transparent 45%),
+                radial-gradient(circle at 90% 100%, #8a2a5c 0%, transparent 45%),
+                #140e33;
+    color: #fff;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
+    padding: 12px 16px 24px;
     overflow-x: hidden;
   }
-  .hud {
-    width: 100%; max-width: 820px;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 12px; flex-wrap: wrap;
-    color: #fff; font-weight: bold; font-size: 1.1rem;
-    margin-bottom: 12px;
+  .wrap { width: 100%; max-width: 1340px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1200px) {
+    .wrap { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+    .card { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
   }
-  .hud .pill {
-    background: rgba(255,255,255,0.14);
-    border: 2px solid rgba(255,255,255,0.25);
-    padding: 8px 14px; border-radius: 999px;
-    display: flex; align-items: center; gap: 8px;
-  }
+  .left { width: 100%; max-width: min(960px, calc((100vh - 90px) * 16 / 9)); margin: 0 auto; min-width: 280px; }
+
+  .hud { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-weight: bold; }
+  .pill { background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.22); padding: 6px 14px; border-radius: 999px; display: flex; align-items: center; gap: 8px; }
   .hearts span { display: inline-block; transition: transform .3s, opacity .3s; }
   .hearts span.lost { opacity: .25; filter: grayscale(1); transform: scale(.8); }
-  .hearts span.hit { animation: heartHit .6s; }
-  @keyframes heartHit { 0%{transform:scale(1)} 30%{transform:scale(1.6) rotate(-15deg)} 100%{transform:scale(.8)} }
-  .score-pop { animation: pop .4s; }
+  .prog { flex: 1; min-width: 160px; }
+  .prog .bar { flex: 1; height: 10px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; min-width: 60px; }
+  .prog .bar div { height: 100%; width: 0; background: linear-gradient(90deg, var(--green), #a3e635); transition: width .4s; }
+  .prog.boss .bar div { background: linear-gradient(90deg, var(--red), var(--orange)); }
+  .score-pop { animation: pop .35s; }
   @keyframes pop { 50% { transform: scale(1.3); color: var(--yellow); } }
-  .mute { cursor: pointer; background: none; border: none; color: #fff; font-size: 1.3rem; }
+  .mute { cursor: pointer; color: #fff; font-size: 1.1rem; font-family: inherit; }
 
-  .screen {
-    width: 100%; max-width: 820px;
-    background: var(--card);
-    border-radius: 24px;
-    padding: 28px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.35);
-    animation: enter .45s ease-out;
+  .stage { position: relative; }
+  #cv { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 16px; box-shadow: 0 16px 50px rgba(0,0,0,.45); background: #1e1450; }
+
+  .touch { display: none; justify-content: space-between; margin-top: 10px; gap: 10px; user-select: none; -webkit-user-select: none; }
+  .touch div { display: flex; gap: 10px; }
+  .touch button {
+    font: bold 1.5rem inherit; font-family: inherit; color: #fff; border: none; border-radius: 16px;
+    background: rgba(255,255,255,.18); width: 72px; height: 64px; touch-action: none;
   }
-  @keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.97); } to { opacity: 1; transform: none; } }
-  .hidden { display: none !important; }
+  .touch button.jump { width: 120px; background: linear-gradient(135deg, var(--pink), var(--orange)); font-size: 1.1rem; }
+  .touch button.on { transform: scale(.94); background: rgba(255,255,255,.35); }
+  @media (hover: none) and (pointer: coarse) { .touch { display: flex; } }
 
-  h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.1; color: var(--purple); text-align: center; }
-  h1 .tag { display: block; font-size: .45em; color: var(--pink); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
-  h2 { font-size: clamp(1.3rem, 3.5vw, 1.7rem); color: var(--purple); margin-bottom: 8px; }
-  p { line-height: 1.55; color: var(--muted); }
-  .hero { font-size: 4rem; text-align: center; margin: 12px 0; animation: float 3s ease-in-out infinite; }
-  @keyframes float { 50% { transform: translateY(-10px); } }
-  .story { background: #f5f0ff; border-left: 6px solid var(--purple); padding: 14px 18px; border-radius: 12px; margin: 16px 0; }
-  .story p { color: var(--ink); }
-  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 16px 0 22px; }
-  .rule { background: #fff7e0; border-radius: 14px; padding: 12px; text-align: center; font-size: .95rem; color: var(--ink); border: 2px solid #ffe7a3; }
-  .rule b { display: block; font-size: 1.6rem; margin-bottom: 4px; }
+  .card { background: #fff; color: var(--ink); border-radius: 18px; padding: 18px; box-shadow: 0 16px 50px rgba(0,0,0,.35); width: 100%; max-width: 960px; margin: 0 auto; }
+  .card-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .card-title h3 { color: var(--purple); font-size: 1.1rem; }
+  .badge { background: var(--blue); color: #fff; padding: 4px 12px; border-radius: 999px; font-size: .8rem; font-weight: bold; white-space: nowrap; }
+  .badge.boss { background: var(--red); }
+  .q { font-weight: bold; font-size: 1.08rem; line-height: 1.4; margin-bottom: 10px; }
+  .data { margin-bottom: 10px; overflow-x: auto; }
+  .hint { font-size: .9rem; color: var(--muted); background: #f5f0ff; border-radius: 10px; padding: 8px 10px; line-height: 1.4; }
+  .timer { height: 10px; background: #f1edf9; border-radius: 999px; overflow: hidden; margin: 4px 0 10px; }
+  .timer div { height: 100%; background: linear-gradient(90deg, var(--yellow), var(--orange)); width: 100%; transition: width .25s linear; }
+  .feed { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: .92rem; line-height: 1.45; animation: fin .3s ease-out; }
+  .feed.ok { background: #e6f9ed; border: 2px solid var(--green); }
+  .feed.bad { background: #fde8e8; border: 2px solid var(--red); }
+  @keyframes fin { from { opacity: 0; transform: translateY(8px); } }
+  .flash { animation: cardFlash .8s; }
+  @keyframes cardFlash { 30% { box-shadow: 0 0 0 6px var(--yellow), 0 16px 50px rgba(0,0,0,.35); } }
 
+  table.sheet { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  table.sheet th { background: #1f7a4a; color: #fff; padding: 5px 8px; text-align: left; }
+  table.sheet td { border: 1px solid #cfe5d8; padding: 5px 8px; }
+  table.sheet tr:nth-child(even) td { background: #f1faf4; }
+  table.sheet .idx { background: #e7e7ef !important; color: #666; text-align: center; width: 30px; font-weight: bold; }
+  .bars { display: flex; align-items: flex-end; gap: 10px; height: 120px; padding: 6px 6px 0; border-bottom: 3px solid #444; border-left: 3px solid #444; }
+  .bars .b { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+  .bars .b div { width: 100%; border-radius: 6px 6px 0 0; color: #fff; font-weight: bold; text-align: center; font-size: .85rem; padding-top: 2px; }
+  .bar-labels { display: flex; gap: 10px; padding: 4px 6px 0 9px; }
+  .bar-labels span { flex: 1; text-align: center; font-weight: bold; font-size: .78rem; }
+  .chart-title { font-weight: bold; color: var(--muted); margin-bottom: 4px; font-size: .85rem; }
+  svg.line { width: 100%; height: auto; display: block; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(10, 6, 30, .72); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
+  .overlay.hidden { display: none; }
+  .modal { background: #fff; color: var(--ink); border-radius: 24px; padding: 26px; max-width: 640px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; text-align: center; animation: enter .4s ease-out; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  @keyframes enter { from { opacity: 0; transform: translateY(20px) scale(.96); } }
+  .modal h1 { font-size: clamp(1.7rem, 5vw, 2.5rem); color: var(--purple); line-height: 1.1; }
+  .modal .tag { display: block; font-size: .85rem; color: var(--pink); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+  .modal p { color: var(--muted); line-height: 1.5; margin: 10px 0; }
+  .modal .big { font-size: 4rem; animation: float 2.5s ease-in-out infinite; }
+  @keyframes float { 50% { transform: translateY(-8px); } }
+  .story { background: #f5f0ff; border-left: 6px solid var(--purple); padding: 12px 16px; border-radius: 12px; text-align: left; margin: 14px 0; }
+  .story p { color: var(--ink); margin: 4px 0; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 8px; margin: 14px 0 18px; }
+  .rule { background: #fff7e0; border: 2px solid #ffe7a3; border-radius: 12px; padding: 10px; font-size: .88rem; }
+  .rule b { display: block; font-size: 1.4rem; margin-bottom: 2px; }
+  kbd { background: #eee; border: 1px solid #ccc; border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; font-family: inherit; font-weight: bold; }
   .btn {
-    display: inline-block; border: none; cursor: pointer;
-    font-family: inherit; font-weight: bold; font-size: 1.25rem;
-    padding: 16px 34px; border-radius: 16px; color: #fff;
+    border: none; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 1.2rem;
+    padding: 15px 32px; border-radius: 16px; color: #fff;
     background: linear-gradient(135deg, var(--pink), var(--orange));
     box-shadow: 0 6px 0 #b8336a, 0 10px 20px rgba(0,0,0,.2);
-    transition: transform .12s, box-shadow .12s;
+    transition: transform .12s, box-shadow .12s; animation: pulse 1.6s infinite;
   }
   .btn:hover { transform: translateY(-3px) scale(1.03); }
   .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8336a; }
-  .btn.pulse { animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { box-shadow: 0 6px 0 #b8336a, 0 0 0 12px rgba(255,61,127,.15); } }
-  .center { text-align: center; }
-
-  .phase-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .phase-badge { background: var(--blue); color: #fff; padding: 6px 14px; border-radius: 999px; font-weight: bold; font-size: .9rem; }
-  .phase-badge.boss { background: var(--red); }
-  .progress { height: 18px; background: #ece8f7; border-radius: 999px; overflow: hidden; margin: 6px 0 18px; }
-  .progress > div { height: 100%; width: 0; border-radius: 999px; transition: width .5s ease; background: linear-gradient(90deg, var(--green), #8be36f); }
-  .progress.hp > div { background: linear-gradient(90deg, var(--red), var(--orange)); }
-  .progress.time { height: 10px; margin-top: -8px; }
-  .progress.time > div { background: var(--yellow); transition: width .25s linear; }
-  .label { font-size: .9rem; font-weight: bold; color: var(--muted); display: flex; justify-content: space-between; }
-
-  .arena { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 10px; padding: 10px 20px; background: linear-gradient(180deg, #2a1d5c, #4a2a8a); border-radius: 18px; }
-  .fighter { font-size: 3.4rem; text-align: center; color: #fff; }
-  .fighter small { display: block; font-size: .8rem; font-weight: bold; opacity: .9; }
-  .boss-sprite { animation: bossIdle 2s ease-in-out infinite; display: inline-block; }
-  @keyframes bossIdle { 50% { transform: translateY(-6px) rotate(3deg); } }
-  .boss-sprite.hurt { animation: hurt .5s; }
-  @keyframes hurt { 0%,100%{transform:none; filter:none} 25%{transform:translateX(12px); filter: brightness(3)} 50%{transform:translateX(-10px)} 75%{transform:translateX(6px)} }
-  .player-sprite.hurt { animation: hurt .5s; display: inline-block; }
-  .vs { color: var(--yellow); font-weight: bold; font-size: 1.4rem; }
-
-  .question { font-size: clamp(1.1rem, 2.8vw, 1.35rem); color: var(--ink); font-weight: bold; margin: 10px 0 14px; line-height: 1.4; }
-  .data-box { margin: 0 0 16px; overflow-x: auto; }
-  table.sheet { border-collapse: collapse; width: 100%; font-size: 1rem; background: #fff; }
-  table.sheet th { background: #1f7a4a; color: #fff; padding: 8px 10px; text-align: left; }
-  table.sheet td { border: 1px solid #cfe5d8; padding: 8px 10px; }
-  table.sheet tr:nth-child(even) td { background: #f1faf4; }
-  table.sheet td.idx, table.sheet th.idx { background: #e7e7ef; color: #666; text-align: center; width: 36px; font-weight: bold; }
-  .bars { display: flex; align-items: flex-end; gap: 14px; height: 190px; padding: 10px 10px 0; border-bottom: 3px solid #444; border-left: 3px solid #444; }
-  .bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-  .bar .fill { width: 100%; border-radius: 8px 8px 0 0; display: flex; justify-content: center; color: #fff; font-weight: bold; padding-top: 4px; animation: grow .7s ease-out; transform-origin: bottom; }
-  @keyframes grow { from { transform: scaleY(0); } }
-  .bar-labels { display: flex; gap: 14px; padding: 6px 10px 0 13px; }
-  .bar-labels span { flex: 1; text-align: center; font-weight: bold; font-size: .9rem; color: var(--ink); }
-  .chart-title { font-weight: bold; color: var(--muted); margin-bottom: 6px; font-size: .95rem; }
-  svg.line { width: 100%; height: auto; max-height: 230px; display: block; }
-
-  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 560px) { .options { grid-template-columns: 1fr; } .screen { padding: 18px; } }
-  .opt {
-    border: none; cursor: pointer; font-family: inherit; font-weight: bold;
-    font-size: 1.1rem; padding: 18px 16px; border-radius: 16px; color: #fff; text-align: left;
-    display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 5px 0 rgba(0,0,0,.25);
-    transition: transform .12s, box-shadow .12s, opacity .2s;
-    animation: optIn .4s ease-out backwards;
-  }
-  .opt:nth-child(1) { background: var(--blue); animation-delay: .05s; }
-  .opt:nth-child(2) { background: var(--purple); animation-delay: .1s; }
-  .opt:nth-child(3) { background: var(--orange); animation-delay: .15s; }
-  .opt:nth-child(4) { background: var(--pink); animation-delay: .2s; }
-  @keyframes optIn { from { opacity: 0; transform: translateY(14px); } }
-  .opt:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); }
-  .opt:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
-  .opt .key { background: rgba(255,255,255,.25); border-radius: 8px; padding: 2px 9px; font-size: .9rem; }
-  .opt:disabled { cursor: default; opacity: .45; }
-  .opt.right { opacity: 1 !important; background: var(--green) !important; animation: bounce .5s; }
-  .opt.wrong { opacity: 1 !important; background: var(--red) !important; animation: shake .4s; }
-  @keyframes bounce { 50% { transform: scale(1.06); } }
-  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-
-  .feedback { margin-top: 16px; padding: 16px 18px; border-radius: 14px; animation: enter .3s ease-out; display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  .feedback.ok { background: #e6f9ed; border: 2px solid var(--green); }
-  .feedback.bad { background: #fde8e8; border: 2px solid var(--red); }
-  .feedback p { color: var(--ink); flex: 1 1 300px; }
-  .feedback .btn { font-size: 1.05rem; padding: 12px 24px; }
-
-  .big-emoji { font-size: 5rem; text-align: center; animation: float 2.5s ease-in-out infinite; }
-  .final-score { font-size: 2.6rem; font-weight: bold; color: var(--pink); text-align: center; margin: 8px 0; }
-  .stats { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 12px 0 22px; }
-  .stats div { background: #f5f0ff; padding: 10px 16px; border-radius: 12px; font-weight: bold; color: var(--ink); }
-  .float-text { position: fixed; pointer-events: none; font-weight: bold; font-size: 1.8rem; color: var(--yellow); text-shadow: 0 3px 0 #000; animation: rise 1s ease-out forwards; z-index: 50; }
-  @keyframes rise { to { transform: translateY(-80px); opacity: 0; } }
+  .final { font-size: 2.4rem; font-weight: bold; color: var(--pink); margin: 6px 0; }
+  .stats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 20px; }
+  .stats div { background: #f5f0ff; padding: 8px 12px; border-radius: 10px; font-weight: bold; font-size: .9rem; }
   #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
-  footer { color: rgba(255,255,255,.6); font-size: .8rem; margin-top: 16px; text-align: center; }
+  footer { color: rgba(255,255,255,.5); font-size: .8rem; margin-top: 14px; text-align: center; }
 </style>
 </head>
 <body>
 
-<div class="hud" id="hud">
-  <div class="pill hearts" id="hearts" aria-label="Vidas"></div>
-  <div class="pill">⭐ <span id="score">0</span> pts</div>
-  <button class="mute pill" id="muteBtn" title="Som liga/desliga">🔊</button>
-</div>
-
-<!-- TELA INICIAL -->
-<section class="screen" id="start">
-  <h1><span class="tag">Uma aventura de dados</span>O Assistente Lendário</h1>
-  <div class="hero">🧑‍💼📊</div>
-  <div class="story">
-    <p><b>A história:</b> Você acaba de ser contratado como assistente administrativo da <b>Papelaria Horizonte</b>.
-    No seu primeiro dia, uma criatura chamada <b>Caos dos Dados</b> 👾 invadiu o computador da empresa,
-    bagunçou as planilhas e embaralhou os gráficos. O relatório do mês precisa ser entregue hoje!</p>
-    <p style="margin-top:8px">Organize os dados na <b>Fase 1</b> e depois enfrente o próprio Caos dos Dados na <b>Fase 2</b>.
-    Cada resposta certa é um golpe de conhecimento!</p>
-  </div>
-  <div class="rules">
-    <div class="rule"><b>❤️❤️❤️</b>Você tem 3 vidas. Errou, perde uma.</div>
-    <div class="rule"><b>⭐</b>Acertos dão pontos. No chefão, responder rápido dá bônus.</div>
-    <div class="rule"><b>⏱️</b>Na Fase 2 cada pergunta tem 30 segundos.</div>
-    <div class="rule"><b>⌨️</b>Clique na resposta ou use as teclas 1 a 4.</div>
-  </div>
-  <div class="center"><button class="btn pulse" id="startBtn">▶ Começar a missão</button></div>
-</section>
-
-<!-- TELA DE INTRODUÇÃO DE FASE -->
-<section class="screen hidden center" id="intro">
-  <div class="big-emoji" id="introEmoji">📁</div>
-  <h1 id="introTitle">Fase 1</h1>
-  <p id="introText" style="margin:12px auto 22px; max-width:560px; font-size:1.1rem"></p>
-  <button class="btn pulse" id="introBtn">Vamos lá!</button>
-</section>
-
-<!-- TELA DE JOGO -->
-<section class="screen hidden" id="game">
-  <div class="phase-head">
-    <h2 id="phaseName">Fase 1</h2>
-    <span class="phase-badge" id="phaseBadge">Fácil</span>
-  </div>
-
-  <div id="phaseProgressWrap">
-    <div class="label"><span>Progresso da fase</span><span id="progText">0/6</span></div>
-    <div class="progress"><div id="progBar"></div></div>
-  </div>
-
-  <div id="bossWrap" class="hidden">
-    <div class="arena">
-      <div class="fighter"><span class="player-sprite" id="playerSprite">🧑‍💼</span><small>Você</small></div>
-      <div class="vs">VS</div>
-      <div class="fighter"><span class="boss-sprite" id="bossSprite">👾</span><small>Caos dos Dados</small></div>
+<div class="wrap">
+  <div class="left">
+    <div class="hud">
+      <div class="pill hearts" id="hearts"></div>
+      <div class="pill">⭐ <span id="score">0</span></div>
+      <div class="pill prog" id="progPill"><span id="progText">Fase 1</span><div class="bar"><div id="progBar"></div></div></div>
+      <button class="pill mute" id="muteBtn" title="Som">🔊</button>
     </div>
-    <div class="label"><span>Vida do Chefão</span><span id="hpText">100%</span></div>
-    <div class="progress hp"><div id="hpBar" style="width:100%"></div></div>
-    <div class="progress time"><div id="timeBar" style="width:100%"></div></div>
+    <div class="stage"><canvas id="cv"></canvas></div>
+    <div class="touch">
+      <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
+      <button class="jump" data-k="jump">⤒ PULAR</button>
+    </div>
   </div>
 
-  <div class="question" id="qText"></div>
-  <div class="data-box" id="qData"></div>
-  <div class="options" id="qOpts"></div>
-  <div id="feedback"></div>
-</section>
-
-<!-- VITÓRIA -->
-<section class="screen hidden center" id="win">
-  <div class="big-emoji">🏆</div>
-  <h1><span class="tag">Missão cumprida</span>Você é o Assistente Lendário!</h1>
-  <p style="margin-top:10px">O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>
-  <div class="final-score" id="winScore">0 pts</div>
-  <div class="stats" id="winStats"></div>
-  <button class="btn pulse" id="winBtn">🔁 Jogar de novo</button>
-</section>
-
-<!-- GAME OVER -->
-<section class="screen hidden center" id="lose">
-  <div class="big-emoji">💀</div>
-  <h1><span class="tag">Game over</span>O Caos venceu desta vez...</h1>
-  <p style="margin-top:10px">Suas vidas acabaram. Revise as explicações e tente de novo: todo assistente lendário já errou uma planilha!</p>
-  <div class="final-score" id="loseScore">0 pts</div>
-  <div class="stats" id="loseStats"></div>
-  <button class="btn pulse" id="loseBtn">🔁 Tentar novamente</button>
-</section>
-
+  <aside class="card" id="card">
+    <div class="card-title"><h3 id="cTitle">Missão</h3><span class="badge" id="cBadge">Fase 1</span></div>
+    <div class="q" id="cQ"></div>
+    <div class="data" id="cData"></div>
+    <div class="timer" id="cTimerWrap" hidden><div id="cTimer"></div></div>
+    <div class="hint" id="cHint"></div>
+    <div id="cFeed"></div>
+  </aside>
+</div>
 <footer>Desafio Game Dev • TGDQ • Assistente Administrativo</footer>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <canvas id="confetti"></canvas>
 
 <script>
-/* ===================== DADOS DO JOGO ===================== */
-
+/* =========================================================
+   PERGUNTAS
+   ========================================================= */
 function sheet(headers, rows, withIndex) {
   let h = '<table class="sheet"><tr>' + (withIndex ? '<th class="idx"></th>' : '') +
           headers.map(x => '<th>' + x + '</th>').join('') + '</tr>';
   rows.forEach((r, i) => {
-    h += '<tr>' + (withIndex ? '<td class="idx">' + (i + 2) + '</td>' : '') +
-         r.map(c => '<td>' + c + '</td>').join('') + '</tr>';
+    h += '<tr>' + (withIndex ? '<td class="idx">' + (i + 2) + '</td>' : '') + r.map(c => '<td>' + c + '</td>').join('') + '</tr>';
   });
   return h + '</table>';
 }
-
 function bars(title, items) {
   const max = Math.max(...items.map(i => i.v));
-  const colors = ['#3b82f6', '#8b5cf6', '#ff8c42', '#ff3d7f', '#22c55e'];
-  let h = '<div class="chart-title">' + title + '</div><div class="bars">';
-  items.forEach((it, i) => {
-    h += '<div class="bar"><div class="fill" style="height:' + (it.v / max * 100) + '%;background:' + colors[i % colors.length] + '">' + it.v + '</div></div>';
-  });
-  h += '</div><div class="bar-labels">' + items.map(i => '<span>' + i.l + '</span>').join('') + '</div>';
-  return h;
+  const colors = ['#3b82f6', '#8b5cf6', '#ff8c42', '#ff3d7f'];
+  return '<div class="chart-title">' + title + '</div><div class="bars">' +
+    items.map((it, i) => '<div class="b"><div style="height:' + (it.v / max * 100) + '%;background:' + colors[i % 4] + '">' + it.v + '</div></div>').join('') +
+    '</div><div class="bar-labels">' + items.map(i => '<span>' + i.l + '</span>').join('') + '</div>';
 }
-
-function line(title, items, unit) {
-  const W = 520, H = 220, pl = 50, pr = 20, pt = 20, pb = 40;
-  const vals = items.map(i => i.v);
-  const min = 0, max = Math.ceil(Math.max(...vals) / 10) * 10 + 10;
+function line(title, items) {
+  const W = 520, H = 210, pl = 44, pr = 24, pt = 28, pb = 34;
+  const max = Math.ceil(Math.max(...items.map(i => i.v)) / 10) * 10 + 10;
   const x = i => pl + i * (W - pl - pr) / (items.length - 1);
-  const y = v => pt + (1 - (v - min) / (max - min)) * (H - pt - pb);
+  const y = v => pt + (1 - v / max) * (H - pt - pb);
   let s = '<div class="chart-title">' + title + '</div><svg class="line" viewBox="0 0 ' + W + ' ' + H + '">';
-  for (let g = 0; g <= max; g += 10) {
-    s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="#e5e2f0"/>' +
-         '<text x="' + (pl - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="12" fill="#5b5875">' + g + '</text>';
-  }
-  s += '<polyline fill="none" stroke="#ff3d7f" stroke-width="4" stroke-linejoin="round" points="' +
-       items.map((it, i) => x(i) + ',' + y(it.v)).join(' ') + '"/>';
+  for (let g = 0; g <= max; g += 10)
+    s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="#e5e2f0"/><text x="' + (pl - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="12" fill="#5b5875">' + g + '</text>';
+  s += '<polyline fill="none" stroke="#ff3d7f" stroke-width="4" stroke-linejoin="round" points="' + items.map((it, i) => x(i) + ',' + y(it.v)).join(' ') + '"/>';
   items.forEach((it, i) => {
     s += '<circle cx="' + x(i) + '" cy="' + y(it.v) + '" r="7" fill="#8b5cf6" stroke="#fff" stroke-width="3"/>' +
-         '<text x="' + x(i) + '" y="' + (y(it.v) - 14) + '" text-anchor="middle" font-weight="bold" font-size="14" fill="#1d1b2f">' + it.v + unit + '</text>' +
-         '<text x="' + x(i) + '" y="' + (H - 12) + '" text-anchor="middle" font-weight="bold" font-size="14" fill="#1d1b2f">' + it.l + '</text>';
+         '<text x="' + x(i) + '" y="' + (y(it.v) - 13) + '" text-anchor="middle" font-weight="bold" font-size="15" fill="#1d1b2f">' + it.v + '</text>' +
+         '<text x="' + x(i) + '" y="' + (H - 10) + '" text-anchor="middle" font-weight="bold" font-size="14" fill="#1d1b2f">' + it.l + '</text>';
   });
   return s + '</svg>';
 }
 
+const VENDAS = () => sheet(['Dia', 'Canetas vendidas'], [['Segunda', 12], ['Terça', 18], ['Quarta', 15], ['Quinta', 20], ['Sexta', 10]]);
+
 const PHASE1 = [
-  {
-    q: 'A planilha de vendas de canetas da semana foi recuperada. Qual foi o TOTAL de canetas vendidas?',
-    data: () => sheet(['Dia', 'Canetas vendidas'], [['Segunda', 12], ['Terça', 18], ['Quarta', 15], ['Quinta', 20], ['Sexta', 10]]),
-    opts: ['65', '75', '80', '70'], a: 1,
-    exp: '12 + 18 + 15 + 20 + 10 = 75 canetas. No Excel seria =SOMA(B2:B6).'
-  },
-  {
-    q: 'Usando a mesma planilha, qual foi a MÉDIA de canetas vendidas por dia?',
-    data: () => sheet(['Dia', 'Canetas vendidas'], [['Segunda', 12], ['Terça', 18], ['Quarta', 15], ['Quinta', 20], ['Sexta', 10]]),
-    opts: ['12', '18', '15', '20'], a: 2,
-    exp: 'Média = total ÷ quantidade de dias = 75 ÷ 5 = 15. No Excel: =MÉDIA(B2:B6).'
-  },
-  {
-    q: 'O gráfico mostra os atendimentos do mês por setor. Qual setor teve MAIS atendimentos?',
+  { q: 'A planilha de vendas de canetas da semana foi recuperada. Qual foi o TOTAL de canetas vendidas?',
+    data: VENDAS, opts: ['65', '75', '80', '70'], a: 1,
+    exp: '12 + 18 + 15 + 20 + 10 = 75 canetas. No Excel: =SOMA(B2:B6).' },
+  { q: 'Na mesma planilha, qual foi a MÉDIA de canetas vendidas por dia?',
+    data: VENDAS, opts: ['12', '18', '15', '20'], a: 2,
+    exp: 'Média = total ÷ número de dias = 75 ÷ 5 = 15. No Excel: =MÉDIA(B2:B6).' },
+  { q: 'O gráfico mostra os atendimentos do mês por setor. Qual setor teve MAIS atendimentos?',
     data: () => bars('Atendimentos por setor (mês)', [{ l: 'RH', v: 8 }, { l: 'Financeiro', v: 14 }, { l: 'Compras', v: 6 }, { l: 'Vendas', v: 22 }]),
     opts: ['RH', 'Financeiro', 'Compras', 'Vendas'], a: 3,
-    exp: 'A barra mais alta é a de Vendas, com 22 atendimentos.'
-  },
-  {
-    q: 'Na pesquisa com 200 clientes, 50 fizeram alguma reclamação. Qual o PERCENTUAL de clientes que reclamaram?',
-    data: () => '',
-    opts: ['50%', '20%', '25%', '40%'], a: 2,
-    exp: '50 ÷ 200 = 0,25, ou seja, 25%. Percentual = parte ÷ total × 100.'
-  },
-  {
-    q: 'O Caos dos Dados alterou um valor nesta planilha de pedidos. Em qual produto o TOTAL está errado?',
+    exp: 'A barra mais alta é a de Vendas, com 22 atendimentos.' },
+  { q: 'Numa pesquisa com 200 clientes, 50 fizeram reclamação. Qual o PERCENTUAL de clientes que reclamaram?',
+    data: () => '', opts: ['50%', '20%', '25%', '40%'], a: 2,
+    exp: '50 ÷ 200 = 0,25, ou seja, 25%. Percentual = parte ÷ total × 100.' },
+  { q: 'O Caos dos Dados alterou um valor desta planilha de pedidos. Em qual produto o TOTAL está errado?',
     data: () => sheet(['Produto', 'Qtd', 'Preço unit.', 'Total'],
       [['Caderno', 4, 'R$ 10,00', 'R$ 40,00'], ['Lápis', 10, 'R$ 2,00', 'R$ 20,00'], ['Borracha', 5, 'R$ 3,00', 'R$ 18,00'], ['Régua', 2, 'R$ 6,00', 'R$ 12,00']], true),
     opts: ['Caderno', 'Lápis', 'Borracha', 'Régua'], a: 2,
-    exp: 'Borracha: 5 × R$ 3,00 = R$ 15,00, não R$ 18,00. Total = Qtd × Preço unitário (no Excel: =B4*C4).'
-  },
-  {
-    q: 'Notas de satisfação (1 a 5) dadas por 7 clientes: 4, 5, 3, 5, 4, 5, 2. Qual é a MODA?',
-    data: () => '',
-    opts: ['3', '4', '5', '2'], a: 2,
-    exp: 'Moda é o valor que mais se repete. A nota 5 aparece 3 vezes.'
-  }
+    exp: 'Borracha: 5 × R$ 3,00 = R$ 15,00, e não R$ 18,00. Total = Qtd × Preço (no Excel: =B4*C4).' },
+  { q: 'Notas de satisfação (1 a 5) de 7 clientes: 4, 5, 3, 5, 4, 5, 2. Qual é a MODA?',
+    data: () => '', opts: ['3', '4', '5', '2'], a: 2,
+    exp: 'Moda é o valor que mais se repete: a nota 5 aparece 3 vezes.' }
 ];
 
 const PHASE2 = [
-  {
-    q: 'Tempo (em minutos) de 5 atendimentos: 7, 3, 9, 5, 11. Qual é a MEDIANA?',
-    data: () => '',
-    opts: ['5', '7', '9', '35'], a: 1,
-    exp: 'Em ordem: 3, 5, 7, 9, 11. A mediana é o valor do meio: 7.'
-  },
-  {
-    q: 'As vendas da papelaria subiram de R$ 8.000 em março para R$ 10.000 em abril. Qual foi o AUMENTO percentual?',
-    data: () => '',
-    opts: ['20%', '25%', '2%', '80%'], a: 1,
-    exp: 'Aumento = 2.000. 2.000 ÷ 8.000 = 0,25 = 25%. Sempre divida pelo valor ANTIGO.'
-  },
-  {
-    q: 'O orçamento anual é de R$ 50.000 e 30% vão para Marketing. Quanto o Marketing recebe?',
-    data: () => '',
-    opts: ['R$ 1.500', 'R$ 30.000', 'R$ 15.000', 'R$ 35.000'], a: 2,
-    exp: '30% de 50.000 = 0,30 × 50.000 = R$ 15.000.'
-  },
-  {
-    q: 'Faturamento mensal (em mil reais). Em qual mês houve a MAIOR QUEDA em relação ao mês anterior?',
-    data: () => line('Faturamento (R$ mil)', [{ l: 'Jan', v: 40 }, { l: 'Fev', v: 32 }, { l: 'Mar', v: 50 }, { l: 'Abr', v: 45 }], ''),
+  { q: 'Tempo (em minutos) de 5 atendimentos: 7, 3, 9, 5, 11. Qual é a MEDIANA?',
+    data: () => '', opts: ['5', '7', '9', '35'], a: 1,
+    exp: 'Em ordem: 3, 5, 7, 9, 11. A mediana é o valor do meio: 7.' },
+  { q: 'As vendas subiram de R$ 8.000 em março para R$ 10.000 em abril. Qual foi o AUMENTO percentual?',
+    data: () => '', opts: ['20%', '25%', '2%', '80%'], a: 1,
+    exp: 'Aumento = 2.000. 2.000 ÷ 8.000 = 0,25 = 25%. Sempre divida pelo valor ANTIGO.' },
+  { q: 'O orçamento anual é de R$ 50.000 e 30% vão para Marketing. Quanto o Marketing recebe?',
+    data: () => '', opts: ['R$ 1.500', 'R$ 30.000', 'R$ 15.000', 'R$ 35.000'], a: 2,
+    exp: '30% de 50.000 = 0,30 × 50.000 = R$ 15.000.' },
+  { q: 'Faturamento mensal (em mil reais). Em qual mês houve a MAIOR QUEDA em relação ao mês anterior?',
+    data: () => line('Faturamento (R$ mil)', [{ l: 'Jan', v: 40 }, { l: 'Fev', v: 32 }, { l: 'Mar', v: 50 }, { l: 'Abr', v: 45 }]),
     opts: ['Fevereiro', 'Março', 'Abril', 'Janeiro'], a: 0,
-    exp: 'Jan→Fev caiu 8 mil (40→32). Mar→Abr caiu 5 mil (50→45). Março subiu. A maior queda foi em Fevereiro.'
-  },
-  {
-    q: 'Salários de uma equipe: R$ 2.000, R$ 2.100, R$ 2.200, R$ 2.300 e R$ 15.000 (diretor). Qual medida representa MELHOR o salário típico?',
-    data: () => '',
-    opts: ['Média', 'Mediana', 'Maior valor', 'Soma'], a: 1,
-    exp: 'O salário de R$ 15.000 puxa a média para cima (R$ 4.720). A mediana (R$ 2.200) não é afetada por valores extremos.'
-  },
-  {
-    q: 'Um produto de R$ 250,00 está com 20% de desconto. Qual é o preço final?',
-    data: () => '',
-    opts: ['R$ 230,00', 'R$ 200,00', 'R$ 50,00', 'R$ 225,00'], a: 1,
-    exp: '20% de 250 = 50. Preço final = 250 − 50 = R$ 200,00 (ou 250 × 0,80).'
-  }
+    exp: 'Jan→Fev caiu 8 mil (40→32). Mar→Abr caiu 5 mil (50→45). Março subiu. A maior queda foi em Fevereiro.' },
+  { q: 'Salários de uma equipe: R$ 2.000, R$ 2.100, R$ 2.200, R$ 2.300 e R$ 15.000 (diretor). Qual medida representa MELHOR o salário típico?',
+    data: () => '', opts: ['Média', 'Mediana', 'Maior valor', 'Soma'], a: 1,
+    exp: 'O salário de R$ 15.000 puxa a média para R$ 4.720. A mediana (R$ 2.200) não é afetada por valores extremos.' },
+  { q: 'Um produto de R$ 250,00 está com 20% de desconto. Qual é o preço final?',
+    data: () => '', opts: ['R$ 230', 'R$ 200', 'R$ 50', 'R$ 225'], a: 1,
+    exp: '20% de 250 = 50. Preço final = 250 − 50 = R$ 200 (ou 250 × 0,80).' }
 ];
 
-/* ===================== ESTADO ===================== */
-
-const MAX_LIVES = 3, BOSS_TIME = 30, P1_POINTS = 100, P2_POINTS = 150;
-let st = {};
+/* =========================================================
+   CONFIGURAÇÃO
+   ========================================================= */
 const $ = id => document.getElementById(id);
+const W = 960, H = 540, T = 40, GY = 480;
+const MAX_LIVES = 3, BOSS_TIME = 40;
+const GRAV = 0.6, MAXFALL = 14, SPEED = 4.8, JUMP = -13.4;
+const FONT = '"Trebuchet MS", "Segoe UI", sans-serif';
+const cv = $('cv'), ctx = cv.getContext('2d');
+let DPR = 1;
+function fitCanvas() { DPR = Math.min(2, window.devicePixelRatio || 1); cv.width = W * DPR; cv.height = H * DPR; }
+fitCanvas();
 
-function resetState() {
-  st = {
-    lives: MAX_LIVES, score: 0, phase: 1, queue: [], idx: 0,
-    answered: false, right: 0, wrong: 0, bossHp: PHASE2.length, timer: null, timeLeft: BOSS_TIME
-  };
-}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+const rand = (a, b) => a + Math.random() * (b - a);
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 
-/* ===================== SOM ===================== */
-
+/* =========================================================
+   SOM
+   ========================================================= */
 let audioCtx = null, muted = false;
-function beep(freqs, dur = 0.12, type = 'square') {
+function beep(freqs, dur = 0.1, type = 'square', vol = 0.07) {
   if (muted) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -405,285 +266,736 @@ function beep(freqs, dur = 0.12, type = 'square') {
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.type = type; o.frequency.value = f;
       const t = audioCtx.currentTime + i * dur;
-      g.gain.setValueAtTime(0.08, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(t); o.stop(t + dur);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + dur);
     });
-  } catch (e) { /* sem som, sem problema */ }
+  } catch (e) {}
 }
 const sfx = {
-  right: () => beep([660, 880], 0.1),
-  wrong: () => beep([220, 160], 0.18, 'sawtooth'),
-  hit: () => beep([300, 600, 900], 0.07),
-  win: () => beep([523, 659, 784, 1047], 0.15, 'triangle'),
-  lose: () => beep([392, 330, 262, 196], 0.22, 'triangle'),
-  start: () => beep([440, 660], 0.1, 'triangle')
+  jump: () => beep([380, 560], 0.05, 'square', 0.04),
+  coin: () => beep([988, 1319], 0.06, 'square', 0.04),
+  stomp: () => beep([200, 120], 0.07, 'square', 0.06),
+  hurt: () => beep([300, 180, 110], 0.09, 'sawtooth', 0.07),
+  bonk: () => beep([140], 0.06, 'square', 0.05),
+  right: () => beep([660, 880, 1175], 0.08, 'triangle', 0.09),
+  wrong: () => beep([220, 160], 0.16, 'sawtooth', 0.07),
+  hit: () => beep([300, 600, 900, 1200], 0.06, 'square', 0.07),
+  door: () => beep([440, 554, 659], 0.1, 'triangle', 0.08),
+  win: () => beep([523, 659, 784, 1047, 1319], 0.14, 'triangle', 0.09),
+  lose: () => beep([392, 330, 262, 196], 0.2, 'triangle', 0.09)
 };
 
-/* ===================== HUD ===================== */
+/* =========================================================
+   CONTROLES
+   ========================================================= */
+const keys = { left: false, right: false, jump: false, jumpHit: false };
+const KM = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump' };
+addEventListener('keydown', e => {
+  const k = KM[e.code];
+  if (!k) return;
+  if (G.mode === 'play') e.preventDefault();
+  if (k === 'jump' && !keys.jump) keys.jumpHit = true;
+  keys[k] = true;
+});
+addEventListener('keyup', e => { const k = KM[e.code]; if (k) keys[k] = false; });
+addEventListener('blur', () => { keys.left = keys.right = keys.jump = false; });
+document.querySelectorAll('.touch button').forEach(b => {
+  const k = b.dataset.k;
+  const on = e => { e.preventDefault(); if (k === 'jump' && !keys.jump) keys.jumpHit = true; keys[k] = true; b.classList.add('on'); };
+  const off = e => { e.preventDefault(); keys[k] = false; b.classList.remove('on'); };
+  b.addEventListener('pointerdown', on);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, off));
+});
 
-function renderHud(hitHeart) {
-  let h = '';
-  for (let i = 0; i < MAX_LIVES; i++) {
-    const lost = i >= st.lives;
-    h += '<span class="' + (lost ? 'lost' : '') + (lost && i === hitHeart ? ' hit' : '') + '">❤️</span>';
-  }
-  $('hearts').innerHTML = h;
-  $('score').textContent = st.score;
+/* =========================================================
+   ESTADO E CONSTRUÇÃO DAS FASES
+   ========================================================= */
+let G = { mode: 'menu' };
+
+function makePlayer(x, y) { return { x, y, w: 30, h: 52, vx: 0, vy: 0, on: false, face: 1, inv: 0, coyote: 0, buf: 0, jumping: false }; }
+
+function newGame() {
+  G = {
+    mode: 'play', phase: 1, lives: MAX_LIVES, score: 0, right: 0, wrong: 0, coinsN: 0, stomps: 0,
+    frame: 0, shake: 0, camX: 0, worldW: W,
+    solids: [], blocks: [], gates: [], enemies: [], coins: [], parts: [], texts: [], shots: [], beams: [], signs: [],
+    stations: [], cur: 0, door: null, boss: null, checkpoint: 80
+  };
+  G.p = makePlayer(80, GY - 52);
+  buildLevel1();
+  $('cFeed').innerHTML = '';
+  renderHud(); renderCard();
 }
 
-function addScore(n, el) {
-  st.score += n;
-  const s = $('score');
-  s.classList.remove('score-pop'); void s.offsetWidth; s.classList.add('score-pop');
-  if (el) {
-    const r = el.getBoundingClientRect();
-    const f = document.createElement('div');
-    f.className = 'float-text';
-    f.textContent = '+' + n;
-    f.style.left = (r.left + r.width / 2 - 30) + 'px';
-    f.style.top = (r.top - 10) + 'px';
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 1000);
-  }
-  renderHud();
-}
+function addGround(x, w) { G.solids.push({ x, y: GY, w, h: 60, kind: 'ground' }); }
+function addPlat(x, y, w) { G.solids.push({ x, y, w, h: 20, kind: 'plat' }); }
+function coinLine(x, y, n) { for (let i = 0; i < n; i++) G.coins.push({ x: x + i * 34, y, w: 24, h: 24, taken: false }); }
 
-function show(id) {
-  ['start', 'intro', 'game', 'win', 'lose'].forEach(s => $(s).classList.add('hidden'));
-  const el = $(id);
-  el.classList.remove('hidden');
-  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/* ===================== FLUXO ===================== */
-
-function startGame() {
-  resetState();
-  stopConfetti();
-  renderHud();
-  sfx.start();
-  showIntro(1);
-}
-
-function showIntro(phase) {
-  st.phase = phase;
-  if (phase === 1) {
-    $('introEmoji').textContent = '📁';
-    $('introTitle').innerHTML = '<span class="tag">Fase 1 • Fácil</span>O Arquivo Bagunçado';
-    $('introText').textContent = 'O Caos dos Dados espalhou planilhas e gráficos pelo escritório. Responda ' + PHASE1.length + ' desafios para colocar tudo em ordem antes do confronto final.';
-    $('introBtn').textContent = 'Organizar os dados!';
-  } else {
-    $('introEmoji').textContent = '👾';
-    $('introTitle').innerHTML = '<span class="tag">Fase 2 • Chefão</span>O Caos dos Dados';
-    $('introText').textContent = 'Ele apareceu! Cada resposta certa tira vida do chefão. Se errar, ele contra-ataca e a pergunta volta mais tarde. Você tem ' + BOSS_TIME + ' segundos por pergunta e responder rápido vale bônus!';
-    $('introBtn').textContent = '⚔️ Enfrentar o chefão!';
-  }
-  show('intro');
-}
-
-function beginPhase() {
-  const src = st.phase === 1 ? PHASE1 : PHASE2;
-  st.queue = src.map((_, i) => i);
-  st.idx = 0;
-  st.done = 0;
-  const boss = st.phase === 2;
-  $('phaseName').textContent = boss ? 'Fase 2: O Caos dos Dados' : 'Fase 1: O Arquivo Bagunçado';
-  $('phaseBadge').textContent = boss ? 'Chefão' : 'Fácil';
-  $('phaseBadge').classList.toggle('boss', boss);
-  $('bossWrap').classList.toggle('hidden', !boss);
-  $('phaseProgressWrap').classList.toggle('hidden', boss);
-  if (boss) { st.bossHp = PHASE2.length; renderBoss(); }
-  show('game');
-  renderQuestion();
-}
-
-function current() {
-  const src = st.phase === 1 ? PHASE1 : PHASE2;
-  return src[st.queue[st.idx]];
-}
-
-function renderQuestion() {
-  st.answered = false;
-  const q = current();
-  $('qText').textContent = q.q;
-  const d = q.data();
-  $('qData').innerHTML = d;
-  $('qData').classList.toggle('hidden', !d);
-  $('feedback').innerHTML = '';
-  $('qOpts').innerHTML = q.opts.map((o, i) =>
-    '<button class="opt" data-i="' + i + '"><span class="key">' + (i + 1) + '</span>' + o + '</button>').join('');
-  $('qOpts').querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answer(+b.dataset.i)));
-  if (st.phase === 1) {
-    $('progText').textContent = st.done + '/' + PHASE1.length;
-    $('progBar').style.width = (st.done / PHASE1.length * 100) + '%';
-  } else {
-    startTimer();
-  }
-}
-
-function startTimer() {
-  clearInterval(st.timer);
-  st.timeLeft = BOSS_TIME;
-  $('timeBar').style.width = '100%';
-  st.timer = setInterval(() => {
-    st.timeLeft -= 0.25;
-    $('timeBar').style.width = Math.max(0, st.timeLeft / BOSS_TIME * 100) + '%';
-    if (st.timeLeft <= 0) { clearInterval(st.timer); answer(-1); }
-  }, 250);
-}
-
-function renderBoss() {
-  const pct = Math.round(st.bossHp / PHASE2.length * 100);
-  $('hpBar').style.width = pct + '%';
-  $('hpText').textContent = pct + '%';
-}
-
-function animate(el, cls) {
-  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
-}
-
-function answer(i) {
-  if (st.answered) return;
-  st.answered = true;
-  clearInterval(st.timer);
-  const q = current();
-  const btns = $('qOpts').querySelectorAll('.opt');
-  btns.forEach(b => b.disabled = true);
-  const ok = i === q.a;
-  btns[q.a].classList.add('right');
-  let msg;
-
-  if (ok) {
-    st.right++;
-    sfx.right();
-    let pts = st.phase === 1 ? P1_POINTS : P2_POINTS + Math.ceil(st.timeLeft) * 5;
-    addScore(pts, btns[q.a]);
-    if (st.phase === 2) {
-      st.bossHp--;
-      setTimeout(sfx.hit, 150);
-      animate($('bossSprite'), 'hurt');
-      renderBoss();
-    }
-    st.done++;
-    st.queue.splice(st.idx, 1);
-    msg = '<b>✅ Acertou! +' + pts + ' pts.</b> ' + q.exp;
-  } else {
-    st.wrong++;
-    sfx.wrong();
-    if (i >= 0) btns[i].classList.add('wrong');
-    st.lives--;
-    renderHud(st.lives);
-    if (st.phase === 2) {
-      animate($('playerSprite'), 'hurt');
-      // a pergunta volta para o fim da fila
-      st.queue.push(st.queue.splice(st.idx, 1)[0]);
+function buildLevel1() {
+  addGround(0, 10 * T);
+  coinLine(4 * T, 420, 4);
+  G.signs.push({ x: 2 * T, lines: ['← → andar', '↑ ou Espaço pular'] });
+  let x0 = 10 * T;
+  PHASE1.forEach((q, i) => {
+    // trecho de corrida: buraco nos desafios pares, plataforma com moedas e um bug inimigo
+    if (i % 2 === 1) {
+      addGround(x0, 6 * T); addGround(x0 + 9 * T, 6 * T);
+      addPlat(x0 + 5 * T, 370, 5 * T); coinLine(x0 + 5.6 * T, 330, 5);
     } else {
-      st.done++;
-      st.queue.splice(st.idx, 1);
+      addGround(x0, 15 * T);
+      addPlat(x0 + 4 * T, 370, 3 * T); coinLine(x0 + 4.4 * T, 330, 3);
     }
-    msg = '<b>' + (i < 0 ? '⏰ O tempo acabou!' : '❌ Errou!') + '</b> ' + q.exp;
-  }
-
-  if (st.phase === 1) {
-    $('progText').textContent = st.done + '/' + PHASE1.length;
-    $('progBar').style.width = (st.done / PHASE1.length * 100) + '%';
-  }
-
-  const gameOver = st.lives <= 0;
-  const phaseDone = st.queue.length === 0;
-  let label = 'Próxima ➜';
-  if (gameOver) label = 'Ver resultado';
-  else if (phaseDone && st.phase === 1) label = 'Ir para o Chefão ➜';
-  else if (phaseDone) label = 'Finalizar ➜';
-
-  $('feedback').innerHTML = '<div class="feedback ' + (ok ? 'ok' : 'bad') + '"><p>' + msg +
-    '</p><button class="btn" id="nextBtn">' + label + '</button></div>';
-  $('nextBtn').addEventListener('click', next);
-  $('nextBtn').focus({ preventScroll: true });
-  $('feedback').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    G.enemies.push({ x: x0 + 11 * T, y: GY - 30, w: 34, h: 30, vx: -(1 + i * 0.18), x1: x0 + 9 * T, x2: x0 + 15 * T, alive: true, dead: 0 });
+    // estação de perguntas: 4 blocos de resposta e um portão trancado
+    const sx = x0 + 15 * T;
+    addGround(sx, 19 * T);
+    const perm = shuffle([0, 1, 2, 3]);
+    const st = { i, q, blocks: [], gate: null, solved: false, x: sx };
+    for (let k = 0; k < 4; k++) {
+      const b = { x: sx + (1 + k * 4) * T, y: 320, w: 120, h: 44, kind: 'ans', station: i, idx: perm[k], text: q.opts[perm[k]], state: 'idle', bump: 0 };
+      G.solids.push(b); G.blocks.push(b); st.blocks.push(b);
+    }
+    st.gate = { x: sx + 18 * T, y: -400, w: 30, h: GY + 400, kind: 'gate', open: false, fade: 1 };
+    G.solids.push(st.gate); G.gates.push(st.gate);
+    G.signs.push({ x: sx - 1.5 * T, lines: ['DESAFIO ' + (i + 1), 'veja o quadro'] });
+    G.stations.push(st);
+    x0 += 34 * T;
+  });
+  addGround(x0, 16 * T);
+  coinLine(x0 + 2 * T, 420, 5);
+  G.door = { x: x0 + 10 * T, y: GY - 130, w: 90, h: 130 };
+  G.worldW = x0 + 16 * T;
 }
 
-function next() {
-  if (st.lives <= 0) return endGame(false);
-  if (st.queue.length === 0) {
-    if (st.phase === 1) return showIntro(2);
-    return endGame(true);
+function buildBoss() {
+  G.phase = 2;
+  G.solids = []; G.blocks = []; G.gates = []; G.enemies = []; G.coins = []; G.shots = []; G.beams = []; G.signs = []; G.door = null;
+  G.worldW = W; G.camX = 0; G.checkpoint = 100;
+  G.solids.push({ x: 0, y: GY, w: W, h: 60, kind: 'ground' });
+  G.solids.push({ x: -40, y: -400, w: 40, h: 1000, kind: 'wall' });
+  G.solids.push({ x: W, y: -400, w: 40, h: 1000, kind: 'wall' });
+  [40, 290, 540, 790].forEach(x => {
+    const b = { x, y: 320, w: 130, h: 44, kind: 'ans', idx: 0, text: '', state: 'idle', bump: 0 };
+    G.solids.push(b); G.blocks.push(b);
+  });
+  G.boss = { cx: 480, cy: 120, w: 170, h: 120, hp: PHASE2.length, max: PHASE2.length, t: 0, flash: 0, shootT: 160, dying: 0 };
+  G.bossQ = PHASE2.map((_, i) => i);
+  G.p = makePlayer(100, GY - 52);
+  G.wait = 0;
+  $('cFeed').innerHTML = '';
+  setBossQuestion();
+  renderHud();
+}
+
+function setBossQuestion() {
+  const q = PHASE2[G.bossQ[0]];
+  const perm = shuffle([0, 1, 2, 3]);
+  G.blocks.forEach((b, k) => { b.idx = perm[k]; b.text = q.opts[perm[k]]; b.state = 'idle'; });
+  G.qTime = BOSS_TIME * 60;
+  renderCard();
+}
+
+/* =========================================================
+   HUD E QUADRO DE PERGUNTAS
+   ========================================================= */
+function renderHud() {
+  let h = '';
+  for (let i = 0; i < MAX_LIVES; i++) h += '<span class="' + (i >= G.lives ? 'lost' : '') + '">❤️</span>';
+  $('hearts').innerHTML = h;
+  $('score').textContent = G.score || 0;
+  const pill = $('progPill');
+  if (G.phase === 2 && G.boss) {
+    pill.classList.add('boss');
+    $('progText').textContent = 'Chefão ' + (G.boss.max - G.boss.hp) + '/' + G.boss.max;
+    $('progBar').style.width = ((G.boss.max - G.boss.hp) / G.boss.max * 100) + '%';
+  } else {
+    pill.classList.remove('boss');
+    const n = PHASE1.length, c = G.cur || 0;
+    $('progText').textContent = 'Fase 1 ' + c + '/' + n;
+    $('progBar').style.width = (c / n * 100) + '%';
   }
-  if (st.idx >= st.queue.length) st.idx = 0;
-  renderQuestion();
+}
+
+function renderCard() {
+  const card = $('card');
+  if (G.phase === 1) {
+    $('cBadge').textContent = 'Fase 1 • Fácil'; $('cBadge').classList.remove('boss');
+    $('cTimerWrap').hidden = true;
+    if (G.cur < G.stations.length) {
+      const q = G.stations[G.cur].q;
+      $('cTitle').textContent = 'Desafio ' + (G.cur + 1) + ' de ' + G.stations.length;
+      $('cQ').textContent = q.q;
+      $('cData').innerHTML = q.data();
+      $('cHint').innerHTML = '⬆️ Corra até os blocos amarelos e <b>bata a cabeça</b> (pule por baixo) no bloco com a resposta certa. Resposta errada custa uma vida.';
+    } else {
+      $('cTitle').textContent = 'Dados organizados!';
+      $('cQ').textContent = 'Corra até a porta da Sala do Chefão ➜';
+      $('cData').innerHTML = '';
+      $('cHint').textContent = 'O Caos dos Dados está esperando por você no fim do corredor.';
+    }
+  } else {
+    const q = PHASE2[G.bossQ[0]];
+    $('cBadge').textContent = 'Fase 2 • Chefão'; $('cBadge').classList.add('boss');
+    $('cTitle').textContent = 'Golpe ' + (G.boss.max - G.boss.hp + 1) + ' de ' + G.boss.max;
+    $('cQ').textContent = q.q;
+    $('cData').innerHTML = q.data();
+    $('cTimerWrap').hidden = false;
+    $('cHint').innerHTML = '⬆️ Bata no bloco certo para acertar o chefão. Desvie dos <b>#ERRO!</b> que ele atira. O tempo acabou? Perde uma vida.';
+  }
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+}
+
+function feedback(ok, html) {
+  $('cFeed').innerHTML = '<div class="feed ' + (ok ? 'ok' : 'bad') + '">' + html + '</div>';
+}
+
+function addScore(n, x, y) {
+  G.score += n;
+  G.texts.push({ x, y, t: '+' + n, life: 60 });
+  const s = $('score'); s.classList.remove('score-pop'); void s.offsetWidth; s.classList.add('score-pop');
+  renderHud();
+}
+
+function burst(x, y, colors, n = 16, power = 5) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = rand(1, power);
+    G.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: 40, max: 40, c: colors[i % colors.length], s: rand(3, 6) });
+  }
+}
+
+/* =========================================================
+   LÓGICA
+   ========================================================= */
+function hurt(dir, force) {
+  const p = G.p;
+  if (G.mode !== 'play' || (!force && p.inv > 0)) return;
+  G.lives--; p.inv = 100; G.shake = 14;
+  sfx.hurt();
+  if (dir) { p.vx = dir * 6; p.vy = -6; }
+  renderHud();
+  if (G.lives <= 0) die();
+}
+
+function die() {
+  G.mode = 'dying'; G.dieT = 80; G.lives = 0; renderHud();
+  setTimeout(sfx.lose, 300);
+}
+
+function hitBlock(b) {
+  b.bump = 10;
+  if (b.state !== 'idle') { sfx.bonk(); return; }
+  if (G.phase === 1) {
+    const st = G.stations[b.station];
+    if (st.solved) return;
+    if (b.idx === st.q.a) {
+      b.state = 'right';
+      st.blocks.forEach(o => { if (o !== b) o.state = 'off'; });
+      st.solved = true; st.gate.open = true; G.right++; G.cur++;
+      G.checkpoint = st.gate.x + 60;
+      addScore(100, b.x + b.w / 2, b.y - 10);
+      burst(b.x + b.w / 2, b.y, ['#ffd23f', '#22c55e', '#fff'], 24, 6);
+      sfx.right(); setTimeout(sfx.door, 250);
+      feedback(true, '<b>✅ Correto! O portão abriu.</b> ' + st.q.exp);
+      renderCard(); renderHud();
+    } else {
+      b.state = 'wrong'; G.wrong++; sfx.wrong();
+      feedback(false, '<b>❌ "' + b.text + '" não é a resposta.</b> Você perdeu uma vida. Releia o quadro e tente outro bloco!');
+      hurt(0, true);
+    }
+  } else {
+    bossAnswer(b);
+  }
+}
+
+function bossAnswer(b) {
+  if (G.wait > 0 || G.boss.dying) return;
+  const q = PHASE2[G.bossQ[0]];
+  if (b.idx === q.a) {
+    b.state = 'right';
+    G.blocks.forEach(o => { if (o !== b && o.state === 'idle') o.state = 'off'; });
+    const pts = 150 + Math.ceil(G.qTime / 60) * 5;
+    G.right++;
+    addScore(pts, b.x + b.w / 2, b.y - 10);
+    G.beams.push({ x: b.x + b.w / 2, y: b.y, life: 30 });
+    G.boss.hp--; G.boss.flash = 25; G.shake = 12;
+    sfx.hit();
+    burst(G.boss.cx, G.boss.cy, ['#ffd23f', '#fff', '#ff3d7f'], 30, 7);
+    feedback(true, '<b>💥 Golpe certeiro! +' + pts + '</b> ' + q.exp);
+    G.bossQ.shift();
+    if (G.boss.hp <= 0) { G.boss.dying = 150; G.shots = []; }
+    else G.wait = 70;
+    renderHud();
+  } else {
+    b.state = 'wrong'; G.wrong++; sfx.wrong();
+    feedback(false, '<b>❌ "' + b.text + '" não é a resposta.</b> O chefão riu de você e você perdeu uma vida. Tente outro bloco!');
+    hurt(0, true);
+  }
+}
+
+function collide(p, axis) {
+  for (const s of G.solids) {
+    if (s.open || !overlap(p, s)) continue;
+    if (axis === 'x') {
+      if (p.vx > 0) p.x = s.x - p.w; else if (p.vx < 0) p.x = s.x + s.w;
+      p.vx = 0;
+    } else {
+      if (p.vy > 0) { p.y = s.y - p.h; p.vy = 0; p.on = true; p.jumping = false; }
+      else if (p.vy < 0) { p.y = s.y + s.h; p.vy = 1; if (s.kind === 'ans') hitBlock(s); }
+    }
+  }
+}
+
+function updatePlayer() {
+  const p = G.p;
+  const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (ax) { p.vx = clamp(p.vx + ax * 0.9, -SPEED, SPEED); p.face = ax; }
+  else { p.vx *= 0.75; if (Math.abs(p.vx) < 0.1) p.vx = 0; }
+  if (p.vx > SPEED || p.vx < -SPEED) p.vx *= 0.9;
+
+  p.coyote = p.on ? 6 : p.coyote - 1;
+  if (keys.jumpHit) { p.buf = 8; keys.jumpHit = false; } else if (p.buf > 0) p.buf--;
+  if (p.buf > 0 && p.coyote > 0) { p.vy = JUMP; p.buf = 0; p.coyote = 0; p.jumping = true; sfx.jump(); }
+  if (p.jumping && !keys.jump && p.vy < -5) p.vy = -5;
+  p.vy = Math.min(p.vy + GRAV, MAXFALL);
+
+  p.x += p.vx; collide(p, 'x');
+  p.x = clamp(p.x, 0, G.worldW - p.w);
+  p.on = false;
+  p.y += p.vy; collide(p, 'y');
+  if (p.inv > 0) p.inv--;
+
+  if (p.y > H + 60) { // caiu no buraco
+    G.lives--; G.shake = 14; sfx.hurt(); renderHud();
+    feedback(false, '<b>🕳️ Caiu no buraco!</b> Você perdeu uma vida e voltou ao último portão.');
+    if (G.lives <= 0) { die(); return; }
+    p.x = G.checkpoint; p.y = GY - p.h - 20; p.vx = p.vy = 0; p.inv = 90;
+  }
+}
+
+function updateLevel1() {
+  const p = G.p;
+  for (const e of G.enemies) {
+    if (!e.alive) { if (e.dead > 0) e.dead--; continue; }
+    e.x += e.vx;
+    if (e.x < e.x1) { e.x = e.x1; e.vx *= -1; }
+    if (e.x + e.w > e.x2) { e.x = e.x2 - e.w; e.vx *= -1; }
+    if (overlap(p, e)) {
+      if (p.vy > 0 && p.y + p.h - p.vy <= e.y + 10) {
+        e.alive = false; e.dead = 30; p.vy = -9; p.jumping = false; G.stomps++;
+        sfx.stomp(); burst(e.x + e.w / 2, e.y + 10, ['#ff4d6d', '#fff'], 12, 4);
+        addScore(50, e.x + e.w / 2, e.y - 10);
+      } else hurt(p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1);
+    }
+  }
+  for (const c of G.coins) {
+    if (!c.taken && overlap(p, c)) {
+      c.taken = true; G.coinsN++; sfx.coin();
+      burst(c.x + 12, c.y + 12, ['#ffd23f', '#fff'], 6, 3);
+      addScore(10, c.x + 12, c.y - 4);
+    }
+  }
+  for (const g of G.gates) if (g.open && g.fade > 0) g.fade -= 0.04;
+  if (G.door && overlap(p, G.door) && G.mode === 'play') bossIntro();
+}
+
+function updateBoss() {
+  const b = G.boss, p = G.p;
+  if (b.dying > 0) {
+    b.dying--;
+    if (b.dying % 8 === 0) { burst(b.cx + rand(-70, 70), b.cy + rand(-50, 50), ['#ff3d7f', '#ffd23f', '#8b5cf6', '#fff'], 18, 6); sfx.stomp(); G.shake = 6; }
+    if (b.dying === 0) endGame(true);
+    return;
+  }
+  b.t++;
+  const anger = b.max - b.hp;
+  b.cx = 480 + Math.sin(b.t / (110 - anger * 6)) * 300;
+  b.cy = 120 + Math.sin(b.t / 37) * 18;
+  if (b.flash > 0) b.flash--;
+
+  if (G.wait > 0) { G.wait--; if (G.wait === 0) setBossQuestion(); }
+  else {
+    G.qTime--;
+    if (G.qTime % 15 === 0) $('cTimer').style.width = (G.qTime / (BOSS_TIME * 60) * 100) + '%';
+    if (G.qTime <= 0) {
+      G.wrong++;
+      feedback(false, '<b>⏰ O tempo acabou!</b> Você perdeu uma vida. O relógio recomeçou, tente de novo!');
+      G.qTime = BOSS_TIME * 60;
+      hurt(0, true);
+    }
+  }
+
+  b.shootT--;
+  if (b.shootT <= 0) {
+    const sp = 2.8 + anger * 0.3;
+    const dx = p.x + p.w / 2 - b.cx, dy = p.y + p.h / 2 - (b.cy + 40), d = Math.hypot(dx, dy) || 1;
+    G.shots.push({ x: b.cx, y: b.cy + 40, vx: dx / d * sp, vy: dy / d * sp, r: 15 });
+    b.shootT = 150 - anger * 14;
+  }
+  for (const s of G.shots) {
+    s.x += s.vx; s.y += s.vy;
+    const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h);
+    if (Math.hypot(s.x - cx, s.y - cy) < s.r) { s.dead = true; hurt(s.vx > 0 ? 1 : -1); burst(s.x, s.y, ['#ef4444', '#fff'], 10, 4); }
+    if (s.y > GY + 10 || s.x < -40 || s.x > W + 40) { s.dead = true; if (s.y > GY) burst(s.x, GY, ['#ef4444', '#ff8c42'], 6, 3); }
+  }
+  G.shots = G.shots.filter(s => !s.dead);
+  G.beams.forEach(bm => bm.life--);
+  G.beams = G.beams.filter(bm => bm.life > 0);
+}
+
+function update() {
+  G.frame++;
+  for (const pt of G.parts) { pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.2; pt.life--; }
+  G.parts = G.parts.filter(pt => pt.life > 0);
+  for (const t of G.texts) { t.y -= 0.8; t.life--; }
+  G.texts = G.texts.filter(t => t.life > 0);
+  for (const b of G.blocks) if (b.bump > 0) b.bump--;
+  if (G.shake > 0) G.shake--;
+
+  if (G.mode === 'dying') { G.dieT--; if (G.dieT <= 0) endGame(false); return; }
+  if (G.mode !== 'play') return;
+
+  updatePlayer();
+  if (G.mode !== 'play') return;
+  if (G.phase === 1) updateLevel1(); else updateBoss();
+  const p = G.p;
+  G.camX = clamp(p.x + p.w / 2 - W * 0.4, 0, G.worldW - W);
+}
+
+/* =========================================================
+   DESENHO
+   ========================================================= */
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function fitFont(t, maxW, base) { let s = base; do { ctx.font = 'bold ' + s + 'px ' + FONT; } while (ctx.measureText(t).width > maxW && --s > 9); }
+
+let seed = 11; const srnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+const BLD = []; for (let bx = 0; bx < 2000;) { const w = 60 + srnd() * 90, h = 110 + srnd() * 210; BLD.push({ x: bx, w, h }); bx += w + 8 + srnd() * 30; }
+const STARS = Array.from({ length: 60 }, () => ({ x: srnd() * 1920, y: srnd() * 260, r: srnd() * 1.6 + .4 }));
+const CHART = Array.from({ length: 14 }, () => 80 + srnd() * 260);
+
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#1e1450'); g.addColorStop(.6, '#4b2a8c'); g.addColorStop(1, '#a8457a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  const so = (G.camX * 0.05) % 1920;
+  for (const s of STARS) { let x = s.x - so; if (x < 0) x += 1920; if (x < W) circle(x, s.y, s.r); }
+  // gráfico de barras gigante ao fundo
+  const co = (G.camX * 0.15) % 1400;
+  ctx.fillStyle = 'rgba(255,255,255,.06)';
+  for (let rep = 0; rep < 2; rep++) CHART.forEach((h, i) => ctx.fillRect(i * 100 - co + rep * 1400, GY - h, 60, h));
+  // prédios
+  const bo = (G.camX * 0.35) % 2000;
+  for (let rep = 0; rep < 2; rep++) for (let i = 0; i < BLD.length; i++) {
+    const b = BLD[i], x = b.x - bo + rep * 2000;
+    if (x > W || x + b.w < 0) continue;
+    ctx.fillStyle = '#24184f'; ctx.fillRect(x, GY - b.h, b.w, b.h);
+    ctx.fillStyle = 'rgba(255, 210, 63, .55)';
+    for (let wy = GY - b.h + 12; wy < GY - 14; wy += 18) for (let wx = x + 8; wx < x + b.w - 10; wx += 16)
+      if (((wx - x) * 7 + wy * 13 + i * 31) % 5 === 0) ctx.fillRect(wx, wy, 7, 9);
+  }
+}
+
+function drawSolid(s) {
+  if (s.kind === 'wall' || s.kind === 'gate' || s.kind === 'ans') return;
+  ctx.fillStyle = '#107c41'; ctx.fillRect(s.x, s.y, s.w, s.h);
+  ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = s.x + 40; x < s.x + s.w; x += 40) { ctx.moveTo(x + .5, s.y + 8); ctx.lineTo(x + .5, s.y + s.h); }
+  for (let y = s.y + 28; y < s.y + s.h; y += 20) { ctx.moveTo(s.x, y + .5); ctx.lineTo(s.x + s.w, y + .5); }
+  ctx.stroke();
+  ctx.fillStyle = '#33c481'; ctx.fillRect(s.x, s.y, s.w, 8);
+  if (s.kind === 'plat') { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(s.x, s.y + s.h - 4, s.w, 4); }
+}
+
+function drawSign(sg) {
+  ctx.fillStyle = '#6b4226'; ctx.fillRect(sg.x + 52, GY - 70, 8, 70);
+  ctx.fillStyle = '#f5e6c8'; rr(sg.x, GY - 110, 112, 48, 8); ctx.fill();
+  ctx.strokeStyle = '#6b4226'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#3a2a1a'; ctx.textAlign = 'center';
+  sg.lines.forEach((l, i) => { fitFont(l, 100, i ? 12 : 15); ctx.fillText(l, sg.x + 56, GY - 90 + i * 18); });
+}
+
+function drawDoor(d) {
+  ctx.fillStyle = '#2a1d3d'; rr(d.x - 8, d.y - 8, d.w + 16, d.h + 8, 10); ctx.fill();
+  ctx.fillStyle = '#7c2d12'; rr(d.x, d.y, d.w, d.h, 6); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; circle(d.x + d.w - 16, d.y + d.h / 2, 5);
+  ctx.fillStyle = '#ef4444'; rr(d.x - 14, d.y - 46, d.w + 28, 30, 8); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold 15px ' + FONT;
+  ctx.fillText('SALA DO CHEFÃO', d.x + d.w / 2, d.y - 26);
+  ctx.font = '34px sans-serif'; ctx.fillText('👾', d.x + d.w / 2, d.y + 55 + Math.sin(G.frame / 15) * 4);
+}
+
+function drawGate(g) {
+  if (g.open && g.fade <= 0) return;
+  ctx.save(); ctx.globalAlpha = Math.max(0, g.fade);
+  ctx.fillStyle = 'rgba(239, 68, 68, .35)'; ctx.fillRect(g.x, 0, g.w, GY);
+  ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 3;
+  for (let i = 0; i < 3; i++) { const x = g.x + 6 + i * 9; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, GY); ctx.stroke(); }
+  ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🔒', g.x + g.w / 2, 260 + Math.sin(G.frame / 12) * 4);
+  ctx.restore();
+}
+
+function drawCoin(c) {
+  if (c.taken) return;
+  const s = Math.abs(Math.cos(G.frame * 0.08 + c.x * 0.01));
+  ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(c.x + 12, c.y + 12, 11 * s + 1, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  if (s > .5) { ctx.fillStyle = '#a16207'; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center'; ctx.fillText('$', c.x + 12, c.y + 17); }
+}
+
+function drawBlock(b) {
+  const off = b.bump > 0 ? -Math.sin((10 - b.bump) / 10 * Math.PI) * 9 : 0;
+  const pal = { idle: ['#ffd23f', '#b7791f', '#3a2a00'], right: ['#22c55e', '#15803d', '#fff'], wrong: ['#ef4444', '#991b1b', '#fff'], off: ['#a8a3b8', '#6b6680', '#fff'] }[b.state];
+  const y = b.y + off;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(b.x + 3, y + 5, b.w, b.h, 9); ctx.fill();
+  ctx.fillStyle = pal[0]; rr(b.x, y, b.w, b.h, 9); ctx.fill();
+  ctx.strokeStyle = pal[1]; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = pal[1];
+  [[6, 6], [b.w - 9, 6], [6, b.h - 9], [b.w - 9, b.h - 9]].forEach(([dx, dy]) => ctx.fillRect(b.x + dx, y + dy, 3, 3));
+  ctx.fillStyle = pal[2]; ctx.textAlign = 'center';
+  const label = b.state === 'right' ? '✔ ' + b.text : b.state === 'wrong' ? '✖ ' + b.text : b.text;
+  fitFont(label, b.w - 18, 18);
+  ctx.fillText(label, b.x + b.w / 2, y + b.h / 2 + 6);
+}
+
+function drawEnemy(e) {
+  if (!e.alive) {
+    if (e.dead <= 0) return;
+    ctx.fillStyle = '#ff4d6d'; rr(e.x - 2, e.y + e.h - 9, e.w + 4, 9, 4); ctx.fill(); return;
+  }
+  const bob = Math.sin(G.frame * 0.25 + e.x) * 2, dir = Math.sign(e.vx) || 1;
+  ctx.fillStyle = '#b3123b';
+  const step = Math.sin(G.frame * 0.3) * 3;
+  ctx.fillRect(e.x + 6 + step, e.y + e.h - 6, 8, 6); ctx.fillRect(e.x + e.w - 14 - step, e.y + e.h - 6, 8, 6);
+  ctx.fillStyle = '#ff4d6d'; rr(e.x, e.y + bob, e.w, e.h - 4, 9); ctx.fill();
+  ctx.fillStyle = '#fff'; circle(e.x + 11, e.y + 10 + bob, 5); circle(e.x + 23, e.y + 10 + bob, 5);
+  ctx.fillStyle = '#111'; circle(e.x + 11 + dir * 2, e.y + 11 + bob, 2.3); circle(e.x + 23 + dir * 2, e.y + 11 + bob, 2.3);
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(e.x + 6, e.y + 3 + bob); ctx.lineTo(e.x + 15, e.y + 6 + bob);
+  ctx.moveTo(e.x + 28, e.y + 3 + bob); ctx.lineTo(e.x + 19, e.y + 6 + bob); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px ' + FONT; ctx.textAlign = 'center';
+  ctx.fillText('#REF!', e.x + e.w / 2, e.y + 23 + bob);
+}
+
+function drawPlayer(p) {
+  if (G.mode === 'dying') { if (Math.floor(G.dieT / 5) % 2) return; }
+  else if (p.inv > 0 && Math.floor(p.inv / 4) % 2 === 0) return;
+  const x = Math.round(p.x), y = Math.round(p.y), f = p.face;
+  const moving = Math.abs(p.vx) > 0.6 && p.on;
+  const sw = moving ? Math.sin(G.frame * 0.4) * 5 : 0;
+  const air = !p.on;
+  ctx.fillStyle = '#2d3561';
+  ctx.fillRect(x + 7 + sw, y + 38, 7, air ? 11 : 13); ctx.fillRect(x + 16 - sw, y + 38, 7, air ? 9 : 13);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x + 5 + sw + (f > 0 ? 2 : 0), y + (air ? 47 : 49), 10, 4); ctx.fillRect(x + 14 - sw + (f > 0 ? 2 : 0), y + (air ? 45 : 49), 10, 4);
+  ctx.fillStyle = '#e8eef7'; ctx.fillRect(x + 1 + (air ? -2 : 0), y + 22 - (air ? 6 : 0) - sw * .3, 5, 14); ctx.fillRect(x + 24 + (air ? 2 : 0), y + 22 - (air ? 6 : 0) + sw * .3, 5, 14);
+  ctx.fillStyle = '#f8fafc'; rr(x + 4, y + 20, 22, 20, 5); ctx.fill();
+  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(x + 13, y + 21); ctx.lineTo(x + 17, y + 21); ctx.lineTo(x + 15, y + 34); ctx.fill();
+  ctx.fillStyle = '#3b82f6'; ctx.fillRect(x + 19 - (f < 0 ? 12 : 0), y + 25, 5, 6);
+  ctx.fillStyle = '#f2c28b'; circle(x + 15, y + 11, 11);
+  ctx.fillStyle = '#3b2416'; ctx.beginPath(); ctx.arc(x + 15, y + 9, 11.5, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x + 15 - f * 11 - 2, y + 8, 4, 6);
+  ctx.fillStyle = '#111'; circle(x + 15 + f * 5, y + 12, 1.9);
+  ctx.strokeStyle = '#8a4b2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 15 + f * 4, y + 15, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+}
+
+function drawBoss() {
+  const b = G.boss; if (!b) return;
+  ctx.save();
+  if (b.dying) { ctx.globalAlpha = b.dying / 150; ctx.translate(rand(-4, 4), rand(-4, 4)); }
+  const x = b.cx - b.w / 2, y = b.cy - b.h / 2;
+  ctx.fillStyle = '#4c1d95';
+  ctx.beginPath(); ctx.moveTo(x + 22, y + 10); ctx.lineTo(x + 34, y - 30); ctx.lineTo(x + 52, y + 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + b.w - 22, y + 10); ctx.lineTo(x + b.w - 34, y - 30); ctx.lineTo(x + b.w - 52, y + 6); ctx.fill();
+  ctx.fillStyle = b.flash && b.flash % 6 < 3 ? '#fff' : '#7c3aed';
+  rr(x, y, b.w, b.h, 26); ctx.fill();
+  ctx.save(); rr(x, y, b.w, b.h, 26); ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let gx = x + 24; gx < x + b.w; gx += 24) { ctx.moveTo(gx, y); ctx.lineTo(gx, y + b.h); }
+  for (let gy = y + 18; gy < y + b.h; gy += 18) { ctx.moveTo(x, gy); ctx.lineTo(x + b.w, gy); }
+  ctx.stroke(); ctx.restore();
+  const p = G.p, lx = p.x + p.w / 2 - b.cx, ly = p.y - b.cy, d = Math.hypot(lx, ly) || 1;
+  [-38, 38].forEach(dx => {
+    ctx.fillStyle = '#fff'; circle(b.cx + dx, b.cy - 14, 19);
+    ctx.fillStyle = '#ef4444'; circle(b.cx + dx + lx / d * 8, b.cy - 14 + ly / d * 8, 8);
+    ctx.fillStyle = '#111'; circle(b.cx + dx + lx / d * 9, b.cy - 14 + ly / d * 9, 3.5);
+  });
+  ctx.strokeStyle = '#1e0b45'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.moveTo(b.cx - 60, b.cy - 44); ctx.lineTo(b.cx - 20, b.cy - 30);
+  ctx.moveTo(b.cx + 60, b.cy - 44); ctx.lineTo(b.cx + 20, b.cy - 30); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = '#1e0b45'; rr(b.cx - 46, b.cy + 18, 92, 26, 8); ctx.fill();
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(b.cx - 44 + i * 15, b.cy + 18); ctx.lineTo(b.cx - 36 + i * 15, b.cy + 30); ctx.lineTo(b.cx - 29 + i * 15, b.cy + 18); ctx.fill(); }
+  ctx.restore();
+}
+
+function drawBossUI() {
+  const b = G.boss; if (!b) return;
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; rr(270, 10, 420, 46, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'left';
+  ctx.fillText('👾 CAOS DOS DADOS', 284, 28);
+  ctx.textAlign = 'right'; ctx.fillText('⏱ ' + Math.ceil(Math.max(0, G.qTime) / 60) + 's', 676, 28);
+  ctx.fillStyle = '#3b1d1d'; rr(284, 34, 392, 12, 6); ctx.fill();
+  const g = ctx.createLinearGradient(284, 0, 676, 0); g.addColorStop(0, '#ef4444'); g.addColorStop(1, '#ff8c42');
+  ctx.fillStyle = g; if (b.hp > 0) { rr(284, 34, 392 * b.hp / b.max, 12, 6); ctx.fill(); }
+  ctx.fillStyle = '#ffd23f'; ctx.fillRect(284, 49, 392 * Math.max(0, G.qTime) / (BOSS_TIME * 60), 3);
+}
+
+function render() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawBackground();
+  ctx.save();
+  const sx = G.shake ? rand(-4, 4) : 0, sy = G.shake ? rand(-4, 4) : 0;
+  ctx.translate(-Math.round(G.camX) + sx, sy);
+  const vis = o => o.x + (o.w || 120) > G.camX - 50 && o.x < G.camX + W + 50;
+  (G.signs || []).filter(vis).forEach(drawSign);
+  (G.solids || []).filter(vis).forEach(drawSolid);
+  if (G.door && vis(G.door)) drawDoor(G.door);
+  (G.gates || []).filter(vis).forEach(drawGate);
+  (G.coins || []).filter(vis).forEach(drawCoin);
+  (G.blocks || []).filter(vis).forEach(drawBlock);
+  (G.enemies || []).filter(vis).forEach(drawEnemy);
+  if (G.phase === 2) drawBoss();
+  for (const bm of G.beams || []) {
+    ctx.strokeStyle = 'rgba(255, 210, 63,' + bm.life / 30 + ')'; ctx.lineWidth = 12 * bm.life / 30 + 2;
+    ctx.beginPath(); ctx.moveTo(bm.x, bm.y); ctx.lineTo(G.boss.cx, G.boss.cy); ctx.stroke();
+  }
+  if (G.p) drawPlayer(G.p);
+  for (const s of G.shots || []) {
+    ctx.fillStyle = 'rgba(239,68,68,.3)'; circle(s.x, s.y, s.r + 5);
+    ctx.fillStyle = '#ef4444'; circle(s.x, s.y, s.r);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px ' + FONT; ctx.textAlign = 'center'; ctx.fillText('#ERRO', s.x, s.y + 3);
+  }
+  for (const pt of G.parts || []) { ctx.globalAlpha = pt.life / pt.max; ctx.fillStyle = pt.c; ctx.fillRect(pt.x, pt.y, pt.s, pt.s); }
+  ctx.globalAlpha = 1;
+  for (const t of G.texts || []) {
+    ctx.globalAlpha = Math.min(1, t.life / 30); ctx.font = 'bold 20px ' + FONT; ctx.textAlign = 'center';
+    ctx.fillStyle = '#000'; ctx.fillText(t.t, t.x + 2, t.y + 2); ctx.fillStyle = '#ffd23f'; ctx.fillText(t.t, t.x, t.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  if (G.phase === 2) drawBossUI();
+}
+
+/* =========================================================
+   TELAS
+   ========================================================= */
+function overlay(html, onGo) {
+  $('modal').innerHTML = html;
+  $('overlay').classList.remove('hidden');
+  const btn = $('ovBtn');
+  btn.addEventListener('click', () => { $('overlay').classList.add('hidden'); onGo(); });
+  setTimeout(() => btn.focus(), 50);
+}
+
+function showStart() {
+  overlay(
+    '<span class="tag">Uma aventura de dados</span><h1>O Assistente Lendário</h1>' +
+    '<div class="big">🧑‍💼📊</div>' +
+    '<div class="story"><p><b>A história:</b> você acaba de ser contratado como assistente administrativo da <b>Papelaria Horizonte</b>. ' +
+    'No seu primeiro dia, o <b>Caos dos Dados</b> 👾 invadiu o sistema, bagunçou as planilhas e soltou bugs <b>#REF!</b> pelo escritório.</p>' +
+    '<p>Atravesse o escritório resolvendo os desafios de dados (<b>Fase 1</b>) e derrote o Caos dos Dados na sala dele (<b>Fase 2</b>).</p></div>' +
+    '<div class="rules">' +
+    '<div class="rule"><b>⬆️</b>Pule por baixo e <strong>bata a cabeça</strong> no bloco com a resposta certa</div>' +
+    '<div class="rule"><b>🔓</b>Cada acerto abre o portão para seguir</div>' +
+    '<div class="rule"><b>❤️❤️❤️</b>3 vidas. Errar, cair no buraco ou levar dano tira uma</div>' +
+    '<div class="rule"><b>👟</b>Pule em cima dos bugs para derrotá-los (+50)</div>' +
+    '</div>' +
+    '<p><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> para andar, <kbd>↑</kbd> <kbd>W</kbd> ou <kbd>Espaço</kbd> para pular. No celular use os botões abaixo do jogo.</p>' +
+    '<button class="btn" id="ovBtn">▶ Começar a missão</button>',
+    () => { newGame(); G.mode = 'play'; }
+  );
+}
+
+function bossIntro() {
+  G.mode = 'menu'; sfx.door();
+  overlay(
+    '<span class="tag">Fase 2 • Chefão</span><h1>O Caos dos Dados</h1><div class="big">👾</div>' +
+    '<p>Ele está flutuando pela sala e vai atirar <b>#ERRO!</b> em você. Leia a pergunta no quadro, desvie dos tiros e bata no bloco com a resposta certa para acertá-lo.</p>' +
+    '<p>São <b>' + PHASE2.length + ' golpes</b> para derrotá-lo. Cada pergunta tem <b>' + BOSS_TIME + ' segundos</b>, e responder rápido vale bônus!</p>' +
+    '<button class="btn" id="ovBtn">⚔️ Enfrentar o chefão</button>',
+    () => { buildBoss(); G.mode = 'play'; }
+  );
 }
 
 function endGame(won) {
-  clearInterval(st.timer);
-  const stats = '<div>✅ Acertos: ' + st.right + '</div><div>❌ Erros: ' + st.wrong + '</div><div>❤️ Vidas restantes: ' + Math.max(0, st.lives) + '</div>';
+  G.mode = 'menu';
+  const stats = '<div>✅ Acertos: ' + G.right + '</div><div>❌ Erros: ' + G.wrong + '</div><div>🪙 Moedas: ' + G.coinsN + '</div><div>👟 Bugs derrotados: ' + G.stomps + '</div>';
   if (won) {
-    const bonus = st.lives * 200;
-    if (bonus) st.score += bonus;
-    renderHud();
-    $('winScore').textContent = st.score + ' pts';
-    $('winStats').innerHTML = stats + (bonus ? '<div>🎁 Bônus de vidas: +' + bonus + '</div>' : '');
-    show('win');
-    sfx.win();
-    startConfetti();
+    const bonus = G.lives * 200;
+    G.score += bonus; renderHud();
+    sfx.win(); startConfetti();
+    overlay(
+      '<span class="tag">Missão cumprida</span><h1>Você é o Assistente Lendário!</h1><div class="big">🏆</div>' +
+      '<p>O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>' +
+      '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '<div>❤️ Bônus de vidas: +' + bonus + '</div></div>' +
+      '<button class="btn" id="ovBtn">🔁 Jogar de novo</button>',
+      () => { stopConfetti(); newGame(); G.mode = 'play'; }
+    );
   } else {
-    $('loseScore').textContent = st.score + ' pts';
-    $('loseStats').innerHTML = stats;
-    show('lose');
-    sfx.lose();
+    overlay(
+      '<span class="tag">Game over</span><h1>O Caos venceu desta vez...</h1><div class="big">💀</div>' +
+      '<p>Suas vidas acabaram. Leia as explicações no quadro e tente de novo: todo assistente lendário já errou uma planilha!</p>' +
+      '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '</div>' +
+      '<button class="btn" id="ovBtn">🔁 Tentar novamente</button>',
+      () => { newGame(); G.mode = 'play'; }
+    );
   }
 }
 
-/* ===================== CONFETES ===================== */
-
-const cv = $('confetti'), cx = cv.getContext('2d');
+/* =========================================================
+   CONFETES
+   ========================================================= */
+const cc = $('confetti'), cx = cc.getContext('2d');
 let pieces = [], confettiOn = false;
 function startConfetti() {
-  cv.width = innerWidth; cv.height = innerHeight;
+  cc.width = innerWidth; cc.height = innerHeight;
   const colors = ['#ff3d7f', '#ffd23f', '#22c55e', '#3b82f6', '#8b5cf6', '#ff8c42'];
   pieces = Array.from({ length: 180 }, () => ({
-    x: Math.random() * cv.width, y: Math.random() * -cv.height,
-    w: 6 + Math.random() * 8, h: 8 + Math.random() * 10,
-    vy: 2 + Math.random() * 4, vx: -1.5 + Math.random() * 3,
-    r: Math.random() * Math.PI, vr: -0.2 + Math.random() * 0.4,
-    c: colors[Math.floor(Math.random() * colors.length)]
+    x: Math.random() * cc.width, y: Math.random() * -cc.height, w: rand(6, 14), h: rand(8, 18),
+    vy: rand(2, 6), vx: rand(-1.5, 1.5), r: Math.random() * 3, vr: rand(-.2, .2), c: colors[Math.floor(Math.random() * 6)]
   }));
   if (!confettiOn) { confettiOn = true; requestAnimationFrame(drawConfetti); }
 }
 function drawConfetti() {
-  if (!confettiOn) { cx.clearRect(0, 0, cv.width, cv.height); return; }
-  cx.clearRect(0, 0, cv.width, cv.height);
-  pieces.forEach(p => {
+  cx.clearRect(0, 0, cc.width, cc.height);
+  if (!confettiOn) return;
+  for (const p of pieces) {
     p.x += p.vx; p.y += p.vy; p.r += p.vr;
-    if (p.y > cv.height) { p.y = -20; p.x = Math.random() * cv.width; }
-    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r);
-    cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-    cx.restore();
-  });
+    if (p.y > cc.height) { p.y = -20; p.x = Math.random() * cc.width; }
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+  }
   requestAnimationFrame(drawConfetti);
 }
 function stopConfetti() { confettiOn = false; }
-addEventListener('resize', () => { cv.width = innerWidth; cv.height = innerHeight; });
 
-/* ===================== EVENTOS ===================== */
+/* =========================================================
+   LOOP PRINCIPAL
+   ========================================================= */
+$('muteBtn').addEventListener('click', e => { muted = !muted; e.currentTarget.textContent = muted ? '🔇' : '🔊'; e.currentTarget.blur(); });
+addEventListener('resize', () => { fitCanvas(); if (confettiOn) { cc.width = innerWidth; cc.height = innerHeight; } });
 
-$('startBtn').addEventListener('click', startGame);
-$('introBtn').addEventListener('click', beginPhase);
-$('winBtn').addEventListener('click', startGame);
-$('loseBtn').addEventListener('click', startGame);
-$('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; });
+let last = 0, acc = 0;
+const STEP = 1000 / 60;
+function loop(t) {
+  requestAnimationFrame(loop);
+  if (!last) last = t;
+  acc += Math.min(100, t - last); last = t;
+  while (acc >= STEP) { update(); acc -= STEP; }
+  render();
+}
 
-document.addEventListener('keydown', e => {
-  if ($('game').classList.contains('hidden')) return;
-  const n = parseInt(e.key, 10);
-  if (!st.answered && n >= 1 && n <= 4) answer(n - 1);
-  else if (st.answered && (e.key === 'Enter' || e.key === ' ') && document.activeElement !== $('nextBtn')) { e.preventDefault(); next(); }
-});
-
-resetState();
-renderHud();
+newGame(); G.mode = 'menu';
+$('cTitle').textContent = 'Quadro da missão';
+$('cQ').textContent = 'As perguntas aparecem aqui durante o jogo.';
+$('cData').innerHTML = ''; $('cHint').textContent = 'Fique de olho neste quadro: é nele que estão os dados de cada desafio.';
+showStart();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
