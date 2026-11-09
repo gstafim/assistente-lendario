@@ -358,6 +358,8 @@ function addPlat(x, y, w) { G.solids.push({ x, y, w, h: 20, kind: 'plat' }); }
 function addStep(x, y, w) { G.solids.push({ x, y, w, h: GY - y, kind: 'plat' }); }
 function addMover(x, y, w, range, speed) { G.solids.push({ x, y, w, h: 20, kind: 'mover', x0: x, range, speed, dx: 0 }); }
 function addEnemy(x1, x2, speed, y = GY) { G.enemies.push({ x: (x1 + x2) / 2, y: y - 30, w: 34, h: 30, vx: -speed, x1, x2, alive: true, dead: 0 }); }
+// inimigo voador: vai e volta no ar fazendo uma onda (sobe e desce)
+function addFlyer(x1, x2, y, amp, speed) { G.enemies.push({ fly: true, x: (x1 + x2) / 2, y, y0: y, amp, t: Math.random() * 6, w: 36, h: 26, vx: -speed, x1, x2, alive: true, dead: 0 }); }
 function coinLine(x, y, n) { for (let i = 0; i < n; i++) G.coins.push({ x: x + i * 34, y, w: 24, h: 24, taken: false }); }
 function coinArc(cx, y, n, spread, height) {
   for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); G.coins.push({ x: cx - spread / 2 + t * spread - 12, y: y - Math.sin(t * Math.PI) * height, w: 24, h: 24, taken: false }); }
@@ -374,6 +376,7 @@ const RUNS = [
     addGround(x0, 6 * T); addGround(x0 + 9 * T, 6 * T);
     addPlat(x0 + 5 * T, 370, 5 * T); coinLine(x0 + 5.6 * T, 330, 5);
     addEnemy(x0 + 10 * T, x0 + 15 * T, 1.2);
+    addFlyer(x0 + 4 * T, x0 + 11 * T, 230, 35, 1.1);
   },
   x0 => { // 2: escada de planilha, sobe e desce
     addGround(x0, 15 * T);
@@ -385,6 +388,7 @@ const RUNS = [
     addGround(x0, 3 * T); addGround(x0 + 5 * T, 3 * T, GY - 40); addGround(x0 + 10 * T, 5 * T);
     coinArc(x0 + 4 * T, 380, 3, 1.6 * T, 40); coinArc(x0 + 9 * T, 360, 3, 1.6 * T, 40);
     addEnemy(x0 + 10 * T, x0 + 15 * T, 1.4);
+    addFlyer(x0 + 2 * T, x0 + 11 * T, 300, 40, 1.3);
   },
   x0 => { // 4: buraco largo com plataforma que se move
     addGround(x0, 4 * T); addGround(x0 + 11 * T, 4 * T);
@@ -396,6 +400,7 @@ const RUNS = [
     addGround(x0, 15 * T);
     addPlat(x0 + 5 * T, 360, 4 * T); coinLine(x0 + 5.4 * T, 320, 4);
     addEnemy(x0 + 1 * T, x0 + 7 * T, 1.6); addEnemy(x0 + 8 * T, x0 + 15 * T, 1.8);
+    addFlyer(x0 + 4 * T, x0 + 10 * T, 240, 30, 1.4);
   }
 ];
 
@@ -647,8 +652,9 @@ function dust(x, y) {
 function updateLevel1() {
   const p = G.p;
   for (const e of G.enemies) {
-    if (!e.alive) { if (e.dead > 0) e.dead--; continue; }
+    if (!e.alive) { if (e.dead > 0) { e.dead--; if (e.fly) { e.vy = (e.vy || 0) + 0.5; e.y += e.vy; } } continue; }
     e.x += e.vx;
+    if (e.fly) { e.t += 0.05; e.y = e.y0 + Math.sin(e.t) * e.amp; }
     if (e.x < e.x1) { e.x = e.x1; e.vx *= -1; }
     if (e.x + e.w > e.x2) { e.x = e.x2 - e.w; e.vx *= -1; }
     if (overlap(p, e)) {
@@ -878,7 +884,25 @@ function drawBlock(b) {
   ctx.fillText(label, b.x + b.w / 2, y + b.h / 2 + 6);
 }
 
+function drawFlyer(e) {
+  const dir = Math.sign(e.vx) || 1, x = e.x, y = e.y;
+  ctx.save();
+  if (!e.alive) { if (e.dead <= 0) { ctx.restore(); return; } ctx.globalAlpha = e.dead / 30; ctx.translate(x + e.w / 2, y + e.h / 2); ctx.rotate(Math.PI); ctx.translate(-x - e.w / 2, -y - e.h / 2); }
+  const flap = Math.sin(G.frame * 0.5) * 9;
+  ctx.fillStyle = '#7dd3fc';
+  [[x + 4, -1], [x + e.w - 4, 1]].forEach(([wx, s]) => {
+    ctx.beginPath(); ctx.moveTo(wx, y + 10); ctx.lineTo(wx + s * 18, y - 4 - flap); ctx.lineTo(wx + s * 14, y + 14); ctx.closePath(); ctx.fill();
+  });
+  ctx.fillStyle = '#0ea5e9'; rr(x, y, e.w, e.h, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; circle(x + 12, y + 9, 5); circle(x + 24, y + 9, 5);
+  ctx.fillStyle = '#111'; circle(x + 12 + dir * 2, y + 10, 2.3); circle(x + 24 + dir * 2, y + 10, 2.3);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px ' + FONT; ctx.textAlign = 'center';
+  ctx.fillText('#DIV/0!', x + e.w / 2, y + 22);
+  ctx.restore();
+}
+
 function drawEnemy(e) {
+  if (e.fly) return drawFlyer(e);
   if (!e.alive) {
     if (e.dead <= 0) return;
     ctx.fillStyle = '#ff4d6d'; rr(e.x - 2, e.y + e.h - 9, e.w + 4, 9, 4); ctx.fill(); return;
