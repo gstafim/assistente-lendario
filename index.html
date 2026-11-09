@@ -121,6 +121,10 @@
   .btn:hover { transform: translateY(-3px) scale(1.03); }
   .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8336a; }
   @keyframes pulse { 50% { box-shadow: 0 6px 0 #b8336a, 0 0 0 12px rgba(255,61,127,.15); } }
+  .video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; margin: 4px 0 10px; background: #000; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .song { display: inline-block; margin: 0 0 16px; padding: 10px 18px; border-radius: 999px; background: #f5f0ff; color: var(--purple); font-weight: bold; text-decoration: none; border: 2px solid #e4d9ff; }
+  .song:hover { background: #ebe2ff; }
   .final { font-size: 2.4rem; font-weight: bold; color: var(--pink); margin: 6px 0; }
   .stats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 20px; }
   .stats div { background: #f5f0ff; padding: 8px 12px; border-radius: 10px; font-weight: bold; font-size: .9rem; }
@@ -305,7 +309,7 @@ function musicTick(now) {
   if (muted || G.mode !== 'play' || !audioCtx) return;
   const m = MUSIC[G.phase];
   if (now < mNext) return;
-  mNext = now + m.ms;
+  mNext = now + (G.p && G.p.texuga > 0 ? m.ms * 0.7 : m.ms);
   const i = mStep++ % m.bass.length;
   if (m.bass[i]) beep([midi(m.bass[i])], m.ms / 1000 * 0.9, 'triangle', 0.05);
   if (m.lead[i]) beep([midi(m.lead[i])], m.ms / 1000 * 0.8, 'square', 0.012);
@@ -338,7 +342,7 @@ document.querySelectorAll('.touch button').forEach(b => {
    ========================================================= */
 let G = { mode: 'menu' };
 
-function makePlayer(x, y) { return { x, y, w: 30, h: 52, vx: 0, vy: 0, on: false, face: 1, inv: 0, coyote: 0, buf: 0, jumping: false, sq: 0, stand: null, dead: false }; }
+function makePlayer(x, y) { return { x, y, w: 30, h: 52, vx: 0, vy: 0, on: false, face: 1, inv: 0, coyote: 0, buf: 0, jumping: false, sq: 0, stand: null, dead: false, texuga: 0 }; }
 
 function newGame() {
   G = {
@@ -408,6 +412,9 @@ function buildLevel1() {
   addGround(0, 10 * T);
   coinLine(4 * T, 420, 4);
   G.signs.push({ x: 2 * T, lines: ['← → andar', '↑ ou Espaço pular'] });
+  // EASTER EGG: bloco invisível que só aparece quando você bate a cabeça nele
+  G.solids.push({ x: 7 * T, y: 330, w: 40, h: 40, kind: 'secret', hidden: true });
+  G.star = null; G.gotStar = false;
   let x0 = 10 * T;
   PHASE1.forEach((q, i) => {
     RUNS[i % RUNS.length](x0);
@@ -446,6 +453,7 @@ function buildBoss() {
   G.boss = { cx: 480, cy: 120, w: 170, h: 120, hp: PHASE2.length, max: PHASE2.length, t: 0, flash: 0, shootT: 140, charge: 0, dying: 0 };
   G.bossQ = PHASE2.map((_, i) => i);
   G.p = makePlayer(100, GY - 52);
+  G.helper = G.gotStar ? { x: 40, y: GY - 30, face: 1, cd: 0, hop: 0, eaten: 0 } : null;
   G.wait = 0;
   $('cFeed').innerHTML = '';
   setBossQuestion();
@@ -531,9 +539,140 @@ function burst(x, y, colors, n = 16, power = 5) {
 /* =========================================================
    LÓGICA
    ========================================================= */
+/* =========================================================
+   EASTER EGG: A TEXUGA
+   ========================================================= */
+const TEXUGA_TIME = 15 * 60;
+
+function hitSecret(s) {
+  if (!s.hidden) { sfx.bonk(); s.bump = 10; return; }
+  s.hidden = false; s.bump = 10;
+  G.star = { x: s.x + 6, y: s.y - 6, w: 28, h: 28, rise: 30, t: 0 };
+  beep([523, 784, 1047, 1568], 0.07, 'triangle', 0.08);
+  burst(s.x + 20, s.y, ['#ffd23f', '#fff'], 14, 4);
+}
+
+function updateStar(p) {
+  for (const s of G.solids) if (s.kind === 'secret' && s.bump > 0) s.bump--;
+  // pista discreta: um brilhinho de vez em quando onde o bloco secreto está
+  const sec = G.solids.find(s => s.kind === 'secret');
+  if (sec && sec.hidden && G.frame % 150 === 0)
+    G.parts.push({ x: sec.x + rand(8, 32), y: sec.y + rand(8, 32), vx: 0, vy: -0.3, life: 40, max: 40, c: '#fff8c4', s: 4, g: 0 });
+  const st = G.star;
+  if (!st) return;
+  st.t++;
+  if (st.rise > 0) { st.y -= 1.6; st.rise--; }
+  if (overlap(p, st)) { G.star = null; startTexuga(p); }
+}
+
+function startTexuga(p) {
+  G.gotStar = true;
+  if (p.texuga <= 0) { p.y += p.h - 34; p.h = 34; }
+  p.texuga = TEXUGA_TIME;
+  beep([659, 784, 988, 1319, 988, 1319, 1568], 0.08, 'square', 0.06);
+  burst(p.x + p.w / 2, p.y, ['#ffd23f', '#ff3d7f', '#22c55e', '#3b82f6', '#fff'], 40, 7);
+  G.texts.push({ x: p.x + p.w / 2, y: p.y - 20, t: '🦡 TEXUGA!', life: 90 });
+  addScore(500, p.x + p.w / 2, p.y - 50);
+  feedback(true, '<b>🦡 Você achou o segredo e virou a TEXUGA LENDÁRIA!</b> Por 15 segundos você corre mais, pula mais alto e derrota qualquer bug só de encostar. E ela vai lembrar de você na hora do chefão...');
+}
+
+function updateTexuga(p) {
+  if (G.frame % 3 === 0)
+    G.parts.push({ x: p.x + p.w / 2 - p.face * 14, y: p.y + rand(4, p.h - 4), vx: -p.face * 0.5, vy: rand(-0.4, 0.4), life: 24, max: 24, c: 'hsl(' + (G.frame * 8 % 360) + ',95%,65%)', s: 5, g: 0 });
+  if (p.texuga === 1) {
+    // volta a ser gente: só se houver espaço acima, senão espera mais um pouco
+    const tall = { x: p.x, y: p.y - (52 - p.h), w: p.w, h: 52 };
+    if (G.solids.some(s => !s.open && !s.hidden && overlap(tall, s))) return;
+    p.y = tall.y; p.h = 52; p.texuga = 0;
+    burst(p.x + p.w / 2, p.y + 26, ['#fff', '#ffd23f'], 16, 4);
+    beep([784, 523], 0.08, 'triangle', 0.06);
+    return;
+  }
+  p.texuga--;
+}
+
+function updateHelper() {
+  const h = G.helper; if (!h) return;
+  const p = G.p;
+  const tx = clamp(p.x + p.w / 2 - p.face * 55, 30, W - 30);
+  const dx = tx - h.x;
+  h.x += clamp(dx * 0.09, -5, 5);
+  if (Math.abs(dx) > 4) h.face = Math.sign(dx);
+  if (h.cd > 0) h.cd--;
+  if (h.hop > 0) h.hop--;
+  if (h.cd > 0) return;
+  for (const s of G.shots) {
+    if (Math.hypot(s.x - h.x, s.y - (GY - 18)) < 95) {
+      s.dead = true; h.cd = 120; h.hop = 20; h.face = Math.sign(s.x - h.x) || h.face; h.eaten++;
+      burst(s.x, s.y, ['#ef4444', '#fff', '#ffd23f'], 14, 5);
+      G.texts.push({ x: h.x, y: GY - 60, t: 'NHAC!', life: 50 });
+      addScore(25, h.x, GY - 80);
+      beep([300, 200, 400], 0.05, 'square', 0.06);
+      break;
+    }
+  }
+}
+
+/* desenho da texuga: corpo cinza, rosto preto com a listra branca no meio */
+function drawBadger(cx, by, face, sc, walking) {
+  ctx.save();
+  ctx.translate(cx, by); ctx.scale(face * sc, sc); ctx.translate(-24, -32);
+  const sw = walking ? Math.sin(G.frame * 0.5) * 3 : 0;
+  ctx.fillStyle = '#1f2937';
+  ctx.fillRect(8 + sw, 22, 7, 10); ctx.fillRect(30 - sw, 22, 7, 10);
+  ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.ellipse(3, 15, 6, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.ellipse(21, 17, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.ellipse(20, 11, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; circle(34, 7, 4);
+  ctx.fillStyle = '#1f2937'; ctx.beginPath(); ctx.ellipse(40, 15, 11, 9, 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.moveTo(30, 8); ctx.quadraticCurveTo(42, 6, 50, 15); ctx.lineTo(48, 17); ctx.quadraticCurveTo(41, 11, 30, 12); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(41, 21, 7, 3, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111'; circle(50, 16, 2.6);
+  ctx.fillStyle = '#fff'; circle(43, 13, 1.6);
+  ctx.fillStyle = '#ff8fab'; circle(39, 19, 1.8);
+  ctx.restore();
+}
+
+function drawHelper(h) {
+  const hop = h.hop > 0 ? Math.sin((20 - h.hop) / 20 * Math.PI) * 26 : Math.abs(Math.sin(G.frame * 0.15)) * 2;
+  drawBadger(h.x, GY - hop, h.face, 0.85, true);
+  if (h.cd > 0) { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(h.x - 16, GY - 40, 32, 3); ctx.fillStyle = '#ffd23f'; ctx.fillRect(h.x - 16, GY - 40, 32 * (1 - h.cd / 120), 3); }
+}
+
+function drawSecret(s) {
+  if (s.hidden) return;
+  const off = s.bump > 0 ? -Math.sin((10 - s.bump) / 10 * Math.PI) * 8 : 0;
+  ctx.fillStyle = '#a16207'; rr(s.x, s.y + off, s.w, s.h, 6); ctx.fill();
+  ctx.strokeStyle = '#713f12'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#713f12'; [[5, 5], [32, 5], [5, 32], [32, 32]].forEach(([dx, dy]) => ctx.fillRect(s.x + dx, s.y + off + dy, 3, 3));
+}
+
+function drawStar(st) {
+  const cx = st.x + 14, cy = st.y + 14 + Math.sin(st.t / 8) * 3, r = 15;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(st.t / 15) * 0.2);
+  ctx.fillStyle = 'rgba(255, 210, 63, .3)'; circle(0, 0, r + 8 + Math.sin(st.t / 5) * 3);
+  ctx.fillStyle = 'hsl(' + (st.t * 6 % 360) + ', 95%, 62%)';
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr2 = i % 2 ? r * 0.45 : r; ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2); }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#111'; circle(-4, -1, 1.8); circle(4, -1, 1.8);
+  ctx.restore();
+}
+
+function drawTexugaUI() {
+  const p = G.p;
+  if (!p || p.texuga <= 0 || G.mode !== 'play') return;
+  ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(12, 12, 210, 40, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'left';
+  ctx.fillText('🦡 MODO TEXUGA ' + Math.ceil(p.texuga / 60) + 's', 24, 31);
+  ctx.fillStyle = 'hsl(' + (G.frame * 6 % 360) + ',95%,60%)'; ctx.fillRect(24, 39, 186 * p.texuga / TEXUGA_TIME, 5);
+}
+
 function hurt(dir, force) {
   const p = G.p;
-  if (G.mode !== 'play' || (!force && p.inv > 0)) return;
+  if (G.mode !== 'play' || (!force && (p.inv > 0 || p.texuga > 0))) return;
   G.lives--; p.inv = 100; G.shake = 14; G.flash = 10;
   sfx.hurt();
   if (dir) { p.vx = dir * 6; p.vy = -6; }
@@ -601,6 +740,7 @@ function bossAnswer(b) {
 function collide(p, axis) {
   for (const s of G.solids) {
     if (s.open || !overlap(p, s)) continue;
+    if (s.hidden && !(axis === 'y' && p.vy < 0 && p.y - p.vy >= s.y + s.h - 1)) continue;
     if (axis === 'x') {
       if (p.vx > 0) p.x = s.x - p.w; else if (p.vx < 0) p.x = s.x + s.w;
       p.vx = 0;
@@ -609,7 +749,7 @@ function collide(p, axis) {
         if (p.vy > 7) { p.sq = -0.22; dust(p.x + p.w / 2, s.y); }
         p.y = s.y - p.h; p.vy = 0; p.on = true; p.jumping = false; p.stand = s;
       }
-      else if (p.vy < 0) { p.y = s.y + s.h; p.vy = 1; if (s.kind === 'ans') hitBlock(s); }
+      else if (p.vy < 0) { p.y = s.y + s.h; p.vy = 1; if (s.kind === 'ans') hitBlock(s); if (s.kind === 'secret') hitSecret(s); }
     }
   }
 }
@@ -617,13 +757,15 @@ function collide(p, axis) {
 function updatePlayer() {
   const p = G.p;
   const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-  if (ax) { p.vx = clamp(p.vx + ax * 0.9, -SPEED, SPEED); p.face = ax; }
+  const spd = p.texuga > 0 ? 6.6 : SPEED;
+  if (ax) { p.vx = clamp(p.vx + ax * 0.9, -spd, spd); p.face = ax; }
   else { p.vx *= 0.75; if (Math.abs(p.vx) < 0.1) p.vx = 0; }
-  if (p.vx > SPEED || p.vx < -SPEED) p.vx *= 0.9;
+  if (p.vx > spd || p.vx < -spd) p.vx *= 0.9;
+  if (p.texuga > 0) updateTexuga(p);
 
   p.coyote = p.on ? 6 : p.coyote - 1;
   if (keys.jumpHit) { p.buf = 8; keys.jumpHit = false; } else if (p.buf > 0) p.buf--;
-  if (p.buf > 0 && p.coyote > 0) { p.vy = JUMP; p.buf = 0; p.coyote = 0; p.jumping = true; p.sq = 0.2; sfx.jump(); dust(p.x + p.w / 2, p.y + p.h); }
+  if (p.buf > 0 && p.coyote > 0) { p.vy = p.texuga > 0 ? JUMP - 1.4 : JUMP; p.buf = 0; p.coyote = 0; p.jumping = true; p.sq = 0.2; sfx.jump(); dust(p.x + p.w / 2, p.y + p.h); }
   if (p.jumping && !keys.jump && p.vy < -5) p.vy = -5;
   p.vy = Math.min(p.vy + GRAV, MAXFALL);
 
@@ -651,6 +793,7 @@ function dust(x, y) {
 
 function updateLevel1() {
   const p = G.p;
+  updateStar(p);
   for (const e of G.enemies) {
     if (!e.alive) { if (e.dead > 0) { e.dead--; if (e.fly) { e.vy = (e.vy || 0) + 0.5; e.y += e.vy; } } continue; }
     e.x += e.vx;
@@ -658,7 +801,11 @@ function updateLevel1() {
     if (e.x < e.x1) { e.x = e.x1; e.vx *= -1; }
     if (e.x + e.w > e.x2) { e.x = e.x2 - e.w; e.vx *= -1; }
     if (overlap(p, e)) {
-      if (p.vy > 0 && p.y + p.h - p.vy <= e.y + 10) {
+      if (p.texuga > 0) {
+        e.alive = false; e.dead = 30; G.stomps++; sfx.stomp();
+        burst(e.x + e.w / 2, e.y + 10, ['#ff4d6d', '#fff', '#ffd23f'], 14, 5);
+        addScore(50, e.x + e.w / 2, e.y - 10);
+      } else if (p.vy > 0 && p.y + p.h - p.vy <= e.y + 10) {
         e.alive = false; e.dead = 30; p.vy = -9; p.jumping = false; G.stomps++;
         sfx.stomp(); burst(e.x + e.w / 2, e.y + 10, ['#ff4d6d', '#fff'], 12, 4);
         addScore(50, e.x + e.w / 2, e.y - 10);
@@ -716,6 +863,7 @@ function updateBoss() {
       b.shootT = 130 - anger * 12;
     }
   } else if (--b.shootT <= 0) b.charge = 40;
+  updateHelper();
   for (const s of G.shots) {
     s.x += s.vx; s.y += s.vy;
     const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h);
@@ -813,6 +961,7 @@ function drawBackground() {
 
 function drawSolid(s) {
   if (s.kind === 'wall' || s.kind === 'gate' || s.kind === 'ans') return;
+  if (s.kind === 'secret') { drawSecret(s); return; }
   if (s.kind === 'mover') {
     ctx.fillStyle = '#ffd23f'; rr(s.x, s.y, s.w, s.h, 6); ctx.fill();
     ctx.save(); rr(s.x, s.y, s.w, s.h, 6); ctx.clip();
@@ -930,7 +1079,8 @@ function drawPlayer(p) {
   if (p.dead) { ctx.translate(0, -p.h / 2); ctx.rotate(Math.PI); ctx.translate(0, p.h / 2); }
   else ctx.scale(1 - p.sq * 0.6, 1 + p.sq);
   ctx.translate(-cxp, -by);
-  drawPlayerBody(p);
+  if (p.texuga > 0 && !(p.texuga < 120 && Math.floor(p.texuga / 6) % 2)) drawBadger(p.x + p.w / 2, p.y + p.h, p.face, 1.35, Math.abs(p.vx) > 0.6 && p.on);
+  else drawPlayerBody(p);
   ctx.restore();
 }
 
@@ -1020,6 +1170,8 @@ function render() {
     ctx.strokeStyle = 'rgba(255, 210, 63,' + bm.life / 30 + ')'; ctx.lineWidth = 12 * bm.life / 30 + 2;
     ctx.beginPath(); ctx.moveTo(bm.x, bm.y); ctx.lineTo(G.boss.cx, G.boss.cy); ctx.stroke();
   }
+  if (G.star) drawStar(G.star);
+  if (G.helper) drawHelper(G.helper);
   if (G.p) drawPlayer(G.p);
   for (const s of G.shots || []) {
     ctx.fillStyle = 'rgba(239,68,68,.3)'; circle(s.x, s.y, s.r + 5);
@@ -1036,6 +1188,7 @@ function render() {
   ctx.restore();
   if (G.phase === 2) drawBossUI();
   drawBanner();
+  drawTexugaUI();
   if (G.flash > 0) { ctx.fillStyle = 'rgba(239, 68, 68,' + G.flash / 30 + ')'; ctx.fillRect(0, 0, W, H); }
 }
 
@@ -1081,7 +1234,7 @@ function overlay(html, onGo) {
   $('modal').innerHTML = html;
   $('overlay').classList.remove('hidden');
   const btn = $('ovBtn');
-  btn.addEventListener('click', () => { $('overlay').classList.add('hidden'); onGo(); });
+  btn.addEventListener('click', () => { $('overlay').classList.add('hidden'); $('modal').innerHTML = ''; onGo(); });
   setTimeout(() => btn.focus(), 50);
 }
 
@@ -1109,6 +1262,7 @@ function bossIntro() {
   overlay(
     '<span class="tag">Fase 2 • Chefão</span><h1>O Caos dos Dados</h1><div class="big">👾</div>' +
     '<p>Ele está flutuando pela sala e vai atirar <b>#ERRO!</b> em você. Leia a pergunta no quadro, desvie dos tiros e bata no bloco com a resposta certa para acertá-lo.</p>' +
+    (G.gotStar ? '<p>🦡 <b>A Texuga veio te ajudar!</b> Ela fica perto de você e come alguns tiros #ERRO.</p>' : '') +
     '<p>São <b>' + PHASE2.length + ' golpes</b> para derrotá-lo. Cada pergunta tem <b>' + BOSS_TIME + ' segundos</b>, e responder rápido vale bônus!</p>' +
     '<button class="btn" id="ovBtn">⚔️ Enfrentar o chefão</button>',
     () => { buildBoss(); G.mode = 'play'; }
@@ -1117,7 +1271,7 @@ function bossIntro() {
 
 function endGame(won) {
   G.mode = 'menu';
-  const stats = '<div>✅ Acertos: ' + G.right + '</div><div>❌ Erros: ' + G.wrong + '</div><div>🪙 Moedas: ' + G.coinsN + '</div><div>👟 Bugs derrotados: ' + G.stomps + '</div>';
+  const stats = '<div>✅ Acertos: ' + G.right + '</div><div>❌ Erros: ' + G.wrong + '</div><div>🪙 Moedas: ' + G.coinsN + '</div><div>👟 Bugs derrotados: ' + G.stomps + '</div>' + (G.gotStar ? '<div>🦡 Easter egg da Texuga!</div>' : '');
   if (won) {
     const bonus = G.lives * 200;
     G.score += bonus; renderHud();
@@ -1126,6 +1280,9 @@ function endGame(won) {
       '<span class="tag">Missão cumprida</span><h1>Você é o Assistente Lendário!</h1><div class="big">🏆</div>' +
       '<p>O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>' +
       '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '<div>❤️ Bônus de vidas: +' + bonus + '</div></div>' +
+      '<p><b>🎵 Música da vitória: aperte o play!</b></p>' +
+      '<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/9wg3v-01yKQ" title="Harry Styles - Kiwi" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>' +
+      '<a class="song" href="https://www.youtube.com/watch?v=9wg3v-01yKQ" target="_blank" rel="noopener">Não carregou? Abrir no YouTube</a><br>' +
       '<button class="btn" id="ovBtn">🔁 Jogar de novo</button>',
       () => { stopConfetti(); newGame(); G.mode = 'play'; }
     );
