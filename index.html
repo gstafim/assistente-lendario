@@ -138,6 +138,21 @@
     .stats div { padding: 5px 9px; font-size: .8rem; }
     .btn { padding: 12px 26px; font-size: 1.05rem; }
   }
+  .modes { display: flex; gap: 8px; justify-content: center; margin: 10px 0 6px; }
+  .mode { font-family: inherit; font-weight: bold; font-size: 1rem; padding: 9px 16px; border-radius: 12px; border: 3px solid #e4d9ff; background: #f5f0ff; color: var(--ink); cursor: pointer; }
+  .mode.on { border-color: var(--purple); background: var(--purple); color: #fff; }
+  .mode:disabled { opacity: .4; cursor: not-allowed; }
+  .pick { background: #faf8ff; border-radius: 14px; padding: 8px 10px; margin: 8px 0; text-align: left; }
+  .pick-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .ptag { color: #fff; font-weight: bold; border-radius: 999px; padding: 3px 10px; font-size: .85rem; white-space: nowrap; }
+  .pick-h small { color: var(--muted); font-weight: bold; text-align: right; }
+  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .char { font-family: inherit; font-weight: bold; font-size: .9rem; background: #fff; border: 3px solid #e9e4f5; border-radius: 12px; padding: 4px 2px 5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; color: var(--ink); transition: transform .12s; }
+  .char:hover { transform: translateY(-2px); }
+  .char canvas { width: 48px; height: 56px; }
+  .char.sel { border-color: var(--pc); background: #f5f0ff; box-shadow: 0 4px 0 var(--pc); }
+  .char.taken { opacity: .45; }
+  .btn2 { display: block; margin: 10px auto 0; background: none; border: none; color: var(--purple); font-family: inherit; font-weight: bold; font-size: .95rem; cursor: pointer; text-decoration: underline; }
   .keys-touch { display: none; }
   @media (hover: none) and (pointer: coarse) { .keys-desk { display: none; } .keys-touch { display: block; } }
   @media (max-height: 700px) { .modal .big { display: none; } }
@@ -282,7 +297,8 @@ const W = 960, H = 540, T = 40, GY = 480;
 const MAX_LIVES = 3, BOSS_TIME = 40;
 const GRAV = 0.6, MAXFALL = 14, SPEED = 4.8, JUMP = -13.4;
 const FONT = '"Trebuchet MS", "Segoe UI", sans-serif';
-const cv = $('cv'), ctx = cv.getContext('2d');
+const cv = $('cv');
+let ctx = cv.getContext('2d');
 let DPR = 1;
 function fitCanvas() { DPR = Math.min(2, window.devicePixelRatio || 1); cv.width = W * DPR; cv.height = H * DPR; }
 fitCanvas();
@@ -363,7 +379,7 @@ function musicTick(now) {
   if (muted || G.mode !== 'play' || !audioCtx) return;
   const m = MUSIC[G.phase];
   if (now < mNext) return;
-  mNext = now + (G.p && G.p.texuga > 0 ? m.ms * 0.7 : m.ms);
+  mNext = now + (G.ps && G.ps.some(p => p.texuga > 0) ? m.ms * 0.7 : m.ms);
   const i = mStep++ % m.bass.length;
   if (m.bass[i]) beep([midi(m.bass[i])], m.ms / 1000 * 0.9, 'triangle', 0.05);
   if (m.lead[i]) beep([midi(m.lead[i])], m.ms / 1000 * 0.8, 'square', 0.012);
@@ -372,19 +388,34 @@ function musicTick(now) {
 /* =========================================================
    CONTROLES
    ========================================================= */
-const keys = { left: false, right: false, jump: false, jumpHit: false };
-const KM = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump' };
+// configuração escolhida na tela de seleção
+const SETUP = { players: 1, chars: [0, 1] };
+// personagens originais: só muda o visual, todos jogam igual
+const CHARS = [
+  { name: 'Léo', shirt: '#f8fafc', sleeve: '#e8eef7', acc: '#ef4444', pants: '#2d3561', hair: '#3b2416', skin: '#f2c28b', style: 'short', tie: true },
+  { name: 'Bia', shirt: '#c084fc', sleeve: '#a855f7', acc: '#fde047', pants: '#1f2937', hair: '#7c2d12', skin: '#e0ac69', style: 'ponytail' },
+  { name: 'Duda', shirt: '#60a5fa', sleeve: '#3b82f6', acc: '#facc15', pants: '#334155', hair: '#1c1917', skin: '#8d5524', style: 'curly', glasses: true, tie: true },
+  { name: 'Rafa', shirt: '#34d399', sleeve: '#10b981', acc: '#f97316', pants: '#3f3f46', hair: '#a16207', skin: '#f1c27d', style: 'cap' }
+];
+const PCOLORS = ['#3b82f6', '#ff3d7f'];
+
+const keysP = [0, 1].map(() => ({ left: false, right: false, jump: false, jumpHit: false }));
+// 1 jogador: setas, WASD e Espaço. 2 jogadores: J1 = A D W (ou Espaço), J2 = setas
+const KM1 = { ArrowLeft: [0, 'left'], KeyA: [0, 'left'], ArrowRight: [0, 'right'], KeyD: [0, 'right'], ArrowUp: [0, 'jump'], KeyW: [0, 'jump'], Space: [0, 'jump'] };
+const KM2 = { KeyA: [0, 'left'], KeyD: [0, 'right'], KeyW: [0, 'jump'], Space: [0, 'jump'], ArrowLeft: [1, 'left'], ArrowRight: [1, 'right'], ArrowUp: [1, 'jump'] };
+const keyOf = code => (SETUP.players === 2 ? KM2 : KM1)[code];
 addEventListener('keydown', e => {
-  const k = KM[e.code];
-  if (!k) return;
+  const m = keyOf(e.code);
+  if (!m) return;
   if (G.mode === 'play') e.preventDefault();
-  if (k === 'jump' && !keys.jump) keys.jumpHit = true;
-  keys[k] = true;
+  const k = keysP[m[0]];
+  if (m[1] === 'jump' && !k.jump) k.jumpHit = true;
+  k[m[1]] = true;
 });
-addEventListener('keyup', e => { const k = KM[e.code]; if (k) keys[k] = false; });
-addEventListener('blur', () => { keys.left = keys.right = keys.jump = false; });
+addEventListener('keyup', e => { const m = keyOf(e.code); if (m) keysP[m[0]][m[1]] = false; });
+addEventListener('blur', () => keysP.forEach(k => { k.left = k.right = k.jump = false; }));
 document.querySelectorAll('.touch button').forEach(b => {
-  const k = b.dataset.k;
+  const k = b.dataset.k, keys = keysP[0];
   const on = e => { e.preventDefault(); if (k === 'jump' && !keys.jump) keys.jumpHit = true; keys[k] = true; b.classList.add('on'); };
   const off = e => { e.preventDefault(); keys[k] = false; b.classList.remove('on'); };
   b.addEventListener('pointerdown', on);
@@ -396,16 +427,25 @@ document.querySelectorAll('.touch button').forEach(b => {
    ========================================================= */
 let G = { mode: 'menu' };
 
-function makePlayer(x, y) { return { x, y, w: 30, h: 52, vx: 0, vy: 0, on: false, face: 1, inv: 0, coyote: 0, buf: 0, jumping: false, sq: 0, stand: null, dead: false, texuga: 0 }; }
+function makePlayer(x, y, idx = 0) {
+  return { idx, ch: CHARS[SETUP.chars[idx]], k: keysP[idx], x, y, w: 30, h: 52, vx: 0, vy: 0, on: false, face: 1, inv: 0, coyote: 0, buf: 0, jumping: false, sq: 0, stand: null, dead: false, texuga: 0, respawn: false };
+}
+function makePlayers(x) {
+  G.ps = [makePlayer(x, GY - 52, 0)];
+  if (SETUP.players === 2) G.ps.push(makePlayer(x + 60, GY - 52, 1));
+  G.p = G.ps[0];
+}
+const active = () => G.ps.filter(p => !p.respawn);
+const mateOf = p => G.ps.find(q => q !== p);
 
 function newGame() {
   G = {
-    mode: 'play', phase: 1, lives: MAX_LIVES, score: 0, right: 0, wrong: 0, coinsN: 0, stomps: 0,
+    mode: 'play', phase: 1, lives: SETUP.players === 2 ? 5 : MAX_LIVES, maxLives: SETUP.players === 2 ? 5 : MAX_LIVES, score: 0, right: 0, wrong: 0, coinsN: 0, stomps: 0,
     frame: 0, shake: 0, camX: 0, worldW: W,
     solids: [], blocks: [], gates: [], enemies: [], coins: [], parts: [], texts: [], shots: [], beams: [], signs: [],
     stations: [], cur: 0, door: null, boss: null, checkpoint: 80
   };
-  G.p = makePlayer(80, GY - 52);
+  makePlayers(80);
   buildLevel1();
   $('cFeed').innerHTML = '';
   renderHud(); renderCard();
@@ -506,7 +546,7 @@ function buildBoss() {
   });
   G.boss = { cx: 480, cy: 120, w: 170, h: 120, hp: PHASE2.length, max: PHASE2.length, t: 0, flash: 0, shootT: 140, charge: 0, dying: 0 };
   G.bossQ = PHASE2.map((_, i) => i);
-  G.p = makePlayer(100, GY - 52);
+  makePlayers(100);
   G.helper = G.gotStar ? { x: 40, y: GY - 30, face: 1, cd: 0, hop: 0, eaten: 0 } : null;
   G.wait = 0;
   $('cFeed').innerHTML = '';
@@ -527,7 +567,7 @@ function setBossQuestion() {
    ========================================================= */
 function renderHud() {
   let h = '';
-  for (let i = 0; i < MAX_LIVES; i++) h += '<span class="' + (i >= G.lives ? 'lost' : '') + '">❤️</span>';
+  for (let i = 0; i < (G.maxLives || MAX_LIVES); i++) h += '<span class="' + (i >= G.lives ? 'lost' : '') + '">❤️</span>';
   $('hearts').innerHTML = h;
   $('score').textContent = G.score || 0;
   const pill = $('progPill');
@@ -606,7 +646,7 @@ function hitSecret(s) {
   burst(s.x + 20, s.y, ['#ffd23f', '#fff'], 14, 4);
 }
 
-function updateStar(p) {
+function updateStar() {
   for (const s of G.solids) if (s.kind === 'secret' && s.bump > 0) s.bump--;
   // pista discreta: um brilhinho de vez em quando onde o bloco secreto está
   const sec = G.solids.find(s => s.kind === 'secret');
@@ -623,11 +663,12 @@ function updateStar(p) {
     if (st.x < st.stopX) st.x += st.vx;
     if (st.y + st.h >= GY) { st.y = GY - st.h; st.vy = -5; }
   }
-  if (overlap(p, st)) { G.star = null; startTexuga(p); }
+  const p = active().find(q => overlap(q, st));
+  if (p) { G.star = null; startTexuga(p); }
 }
 
 function startTexuga(p) {
-  G.gotStar = true;
+  G.gotStar = true; G.starOwner = p.idx;
   if (p.texuga <= 0) { p.y += p.h - 34; p.h = 34; }
   p.texuga = TEXUGA_TIME;
   beep([659, 784, 988, 1319, 988, 1319, 1568], 0.08, 'square', 0.06);
@@ -654,7 +695,7 @@ function updateTexuga(p) {
 
 function updateHelper() {
   const h = G.helper; if (!h) return;
-  const p = G.p;
+  const p = G.ps[G.starOwner || 0] && !G.ps[G.starOwner || 0].respawn ? G.ps[G.starOwner || 0] : active()[0] || G.p;
   const tx = clamp(p.x + p.w / 2 - p.face * 55, 30, W - 30);
   const dx = tx - h.x;
   h.x += clamp(dx * 0.09, -5, 5);
@@ -732,16 +773,19 @@ function drawStar(st) {
 }
 
 function drawTexugaUI() {
-  const p = G.p;
-  if (!p || p.texuga <= 0 || G.mode !== 'play') return;
-  ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(12, 12, 210, 40, 12); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'left';
-  ctx.fillText('🦡 MODO TEXUGA ' + Math.ceil(p.texuga / 60) + 's', 24, 31);
-  ctx.fillStyle = 'hsl(' + (G.frame * 6 % 360) + ',95%,60%)'; ctx.fillRect(24, 39, 186 * p.texuga / TEXUGA_TIME, 5);
+  if (!G.ps || G.mode !== 'play') return;
+  let y = 12;
+  for (const p of G.ps) {
+    if (p.texuga <= 0) continue;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(12, y, 230, 40, 12); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + FONT; ctx.textAlign = 'left';
+    ctx.fillText('🦡 ' + (G.ps.length > 1 ? 'P' + (p.idx + 1) + ' ' : '') + 'MODO TEXUGA ' + Math.ceil(p.texuga / 60) + 's', 24, y + 19);
+    ctx.fillStyle = 'hsl(' + (G.frame * 6 % 360) + ',95%,60%)'; ctx.fillRect(24, y + 27, 206 * p.texuga / TEXUGA_TIME, 5);
+    y += 46;
+  }
 }
 
-function hurt(dir, force) {
-  const p = G.p;
+function hurt(dir, force, p = G.p) {
   if (G.mode !== 'play' || (!force && (p.inv > 0 || p.texuga > 0))) return;
   G.lives--; p.inv = 100; G.shake = 14; G.flash = 10;
   sfx.hurt();
@@ -752,11 +796,11 @@ function hurt(dir, force) {
 
 function die() {
   G.mode = 'dying'; G.dieT = 90; G.lives = 0; renderHud();
-  G.p.vy = -11; G.p.dead = true; G.p.inv = 0;
+  G.ps.forEach(p => { if (p.respawn) { p.respawn = false; p.y = H + 100; } p.vy = -11; p.dead = true; p.inv = 0; });
   setTimeout(sfx.lose, 300);
 }
 
-function hitBlock(b) {
+function hitBlock(b, p = G.p) {
   b.bump = 10;
   if (b.state !== 'idle') { sfx.bonk(); return; }
   if (G.phase === 1) {
@@ -775,14 +819,14 @@ function hitBlock(b) {
     } else {
       b.state = 'wrong'; G.wrong++; sfx.wrong();
       feedback(false, '<b>❌ "' + b.text + '" não é a resposta.</b> Você perdeu uma vida. Releia o quadro e tente outro bloco!');
-      hurt(0, true);
+      hurt(0, true, p);
     }
   } else {
-    bossAnswer(b);
+    bossAnswer(b, p);
   }
 }
 
-function bossAnswer(b) {
+function bossAnswer(b, p = G.p) {
   if (G.wait > 0 || G.boss.dying) return;
   const q = PHASE2[G.bossQ[0]];
   if (b.idx === q.a) {
@@ -803,7 +847,7 @@ function bossAnswer(b) {
   } else {
     b.state = 'wrong'; G.wrong++; sfx.wrong();
     feedback(false, '<b>❌ "' + b.text + '" não é a resposta.</b> O chefão riu de você e você perdeu uma vida. Tente outro bloco!');
-    hurt(0, true);
+    hurt(0, true, p);
   }
 }
 
@@ -819,13 +863,18 @@ function collide(p, axis) {
         if (p.vy > 7) { p.sq = -0.22; dust(p.x + p.w / 2, s.y); }
         p.y = s.y - p.h; p.vy = 0; p.on = true; p.jumping = false; p.stand = s;
       }
-      else if (p.vy < 0) { p.y = s.y + s.h; p.vy = 1; if (s.kind === 'ans') hitBlock(s); if (s.kind === 'secret') hitSecret(s); }
+      else if (p.vy < 0) { p.y = s.y + s.h; p.vy = 1; if (s.kind === 'ans') hitBlock(s, p); if (s.kind === 'secret') hitSecret(s); }
     }
   }
 }
 
-function updatePlayer() {
-  const p = G.p;
+function updatePlayer(p) {
+  const keys = p.k;
+  if (p.respawn) { // caiu no buraco no modo 2 jogadores: espera o colega pisar em chão firme e reaparece em cima dele
+    const m = mateOf(p);
+    if (m && !m.respawn && m.on) { p.respawn = false; p.x = m.x; p.y = m.y - 70; p.vx = p.vy = 0; p.inv = 90; }
+    return;
+  }
   const ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
   const spd = p.texuga > 0 ? 6.6 : SPEED;
   if (ax) { p.vx = clamp(p.vx + ax * 0.9, -spd, spd); p.face = ax; }
@@ -849,8 +898,14 @@ function updatePlayer() {
 
   if (p.y > H + 60) { // caiu no buraco
     G.lives--; G.shake = 14; sfx.hurt(); renderHud();
-    feedback(false, '<b>🕳️ Caiu no buraco!</b> Você perdeu uma vida e voltou ao último portão.');
     if (G.lives <= 0) { die(); return; }
+    const m = mateOf(p);
+    if (m && !m.respawn) {
+      feedback(false, '<b>🕳️ Caiu no buraco!</b> O time perdeu uma vida. Você volta em cima do seu colega.');
+      p.respawn = true; p.vx = p.vy = 0; p.texuga = 0; p.h = 52;
+      return;
+    }
+    feedback(false, '<b>🕳️ Caiu no buraco!</b> Você perdeu uma vida e voltou ao último portão.');
     p.x = G.checkpoint; p.y = GY - p.h - 20; p.vx = p.vy = 0; p.inv = 90;
     G.camX = clamp(p.x + p.w / 2 - W * 0.4, 0, G.worldW - W);
   }
@@ -862,14 +917,24 @@ function dust(x, y) {
 }
 
 function updateLevel1() {
-  const p = G.p;
-  updateStar(p);
+  updateStar();
+  for (const p of active()) updateLevel1For(p);
+  for (const g of G.gates) if (g.open && g.fade > 0) g.fade -= 0.04;
+}
+
+function updateEnemies() {
   for (const e of G.enemies) {
     if (!e.alive) { if (e.dead > 0) { e.dead--; if (e.fly) { e.vy = (e.vy || 0) + 0.5; e.y += e.vy; } } continue; }
     e.x += e.vx;
     if (e.fly) { e.t += 0.05; e.y = e.y0 + Math.sin(e.t) * e.amp; }
     if (e.x < e.x1) { e.x = e.x1; e.vx *= -1; }
     if (e.x + e.w > e.x2) { e.x = e.x2 - e.w; e.vx *= -1; }
+  }
+}
+
+function updateLevel1For(p) {
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
     if (overlap(p, e)) {
       if (p.texuga > 0) {
         e.alive = false; e.dead = 30; G.stomps++; sfx.stomp();
@@ -879,7 +944,7 @@ function updateLevel1() {
         e.alive = false; e.dead = 30; p.vy = -9; p.jumping = false; G.stomps++;
         sfx.stomp(); burst(e.x + e.w / 2, e.y + 10, ['#ff4d6d', '#fff'], 12, 4);
         addScore(50, e.x + e.w / 2, e.y - 10);
-      } else hurt(p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1);
+      } else hurt(p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1, false, p);
     }
   }
   for (const c of G.coins) {
@@ -889,12 +954,11 @@ function updateLevel1() {
       addScore(10, c.x + 12, c.y - 4);
     }
   }
-  for (const g of G.gates) if (g.open && g.fade > 0) g.fade -= 0.04;
   if (G.door && overlap(p, G.door) && G.mode === 'play') bossIntro();
 }
 
 function updateBoss() {
-  const b = G.boss, p = G.p;
+  const b = G.boss;
   if (b.dying > 0) {
     b.dying--;
     if (b.dying % 8 === 0) { burst(b.cx + rand(-70, 70), b.cy + rand(-50, 50), ['#ff3d7f', '#ffd23f', '#8b5cf6', '#fff'], 18, 6); sfx.stomp(); G.shake = 6; }
@@ -916,7 +980,7 @@ function updateBoss() {
       G.wrong++;
       feedback(false, '<b>⏰ O tempo acabou!</b> Você perdeu uma vida. O relógio recomeçou, tente de novo!');
       G.qTime = BOSS_TIME * 60;
-      hurt(0, true);
+      hurt(0, true, active()[0] || G.p);
     }
   }
 
@@ -925,6 +989,8 @@ function updateBoss() {
     b.charge--;
     if (b.charge === 0) {
       const sp = 3.6 + anger * 0.35;
+      const targets = active(); b.aim = ((b.aim || 0) + 1) % Math.max(1, targets.length);
+      const p = targets[b.aim] || G.p;
       const dx = p.x + p.w / 2 - b.cx, dy = p.y + p.h / 2 - (b.cy + 40);
       const base = Math.atan2(dy, dx);
       const angles = b.hp <= 3 ? [base - 0.28, base, base + 0.28] : [base];
@@ -936,8 +1002,11 @@ function updateBoss() {
   updateHelper();
   for (const s of G.shots) {
     s.x += s.vx; s.y += s.vy;
-    const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h);
-    if (Math.hypot(s.x - cx, s.y - cy) < s.r) { s.dead = true; hurt(s.vx > 0 ? 1 : -1); burst(s.x, s.y, ['#ef4444', '#fff'], 10, 4); }
+    for (const p of active()) {
+      if (s.dead) break;
+      const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h);
+      if (Math.hypot(s.x - cx, s.y - cy) < s.r) { s.dead = true; hurt(s.vx > 0 ? 1 : -1, false, p); burst(s.x, s.y, ['#ef4444', '#fff'], 10, 4); }
+    }
     if (s.y > GY + 10 || s.x < -40 || s.x > W + 40) { s.dead = true; if (s.y > GY) burst(s.x, GY, ['#ef4444', '#ff8c42'], 6, 3); }
   }
   G.shots = G.shots.filter(s => !s.dead);
@@ -957,8 +1026,8 @@ function update() {
   if (G.flash > 0) G.flash--;
 
   if (G.mode === 'dying') {
-    const p = G.p; G.dieT--;
-    if (G.dieT < 60) { p.vy = Math.min(p.vy + GRAV, MAXFALL); p.y += p.vy; }
+    G.dieT--;
+    if (G.dieT < 60) for (const p of G.ps) { p.vy = Math.min(p.vy + GRAV, MAXFALL); p.y += p.vy; }
     if (G.dieT <= 0) endGame(false);
     return;
   }
@@ -967,12 +1036,24 @@ function update() {
   for (const s of G.solids) if (s.kind === 'mover') {
     const nx = s.x0 + Math.sin(G.frame * s.speed) * s.range; s.dx = nx - s.x; s.x = nx;
   }
-  updatePlayer();
-  if (G.mode !== 'play') return;
-  if (G.phase === 1) updateLevel1(); else updateBoss();
-  const p = G.p;
-  const target = clamp(p.x + p.w / 2 - W * 0.4, 0, G.worldW - W);
+  for (const p of G.ps) { updatePlayer(p); if (G.mode !== 'play') return; }
+  leash();
+  if (G.phase === 1) { updateEnemies(); updateLevel1(); } else updateBoss();
+  const ps = active(); if (!ps.length) return;
+  const mid = ps.reduce((a, p) => a + p.x + p.w / 2, 0) / ps.length;
+  const target = clamp(mid - W * (ps.length > 1 ? 0.5 : 0.4), 0, G.worldW - W);
   G.camX += (target - G.camX) * 0.14;
+}
+
+// no modo 2 jogadores ninguém pode se afastar a ponto de sair da tela
+const LEASH = W - 140;
+function leash() {
+  const ps = active(); if (ps.length < 2) return;
+  const [a, b] = ps;
+  for (const [p, o] of [[a, b], [b, a]]) {
+    if (p.x > o.x + LEASH) { p.x = o.x + LEASH; if (p.vx > 0) p.vx = 0; }
+    if (p.x < o.x - LEASH) { p.x = o.x - LEASH; if (p.vx < 0) p.vx = 0; }
+  }
 }
 
 function togglePause() {
@@ -1155,23 +1236,44 @@ function drawPlayer(p) {
 }
 
 function drawPlayerBody(p) {
+  const c = p.ch || CHARS[0];
   const x = Math.round(p.x), y = Math.round(p.y), f = p.face;
   const moving = Math.abs(p.vx) > 0.6 && p.on;
   const sw = moving ? Math.sin(G.frame * 0.4) * 5 : 0;
   const air = !p.on;
-  ctx.fillStyle = '#2d3561';
+  ctx.fillStyle = c.pants;
   ctx.fillRect(x + 7 + sw, y + 38, 7, air ? 11 : 13); ctx.fillRect(x + 16 - sw, y + 38, 7, air ? 9 : 13);
   ctx.fillStyle = '#111';
   ctx.fillRect(x + 5 + sw + (f > 0 ? 2 : 0), y + (air ? 47 : 49), 10, 4); ctx.fillRect(x + 14 - sw + (f > 0 ? 2 : 0), y + (air ? 45 : 49), 10, 4);
-  ctx.fillStyle = '#e8eef7'; ctx.fillRect(x + 1 + (air ? -2 : 0), y + 22 - (air ? 6 : 0) - sw * .3, 5, 14); ctx.fillRect(x + 24 + (air ? 2 : 0), y + 22 - (air ? 6 : 0) + sw * .3, 5, 14);
-  ctx.fillStyle = '#f8fafc'; rr(x + 4, y + 20, 22, 20, 5); ctx.fill();
-  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(x + 13, y + 21); ctx.lineTo(x + 17, y + 21); ctx.lineTo(x + 15, y + 34); ctx.fill();
-  ctx.fillStyle = '#3b82f6'; ctx.fillRect(x + 19 - (f < 0 ? 12 : 0), y + 25, 5, 6);
-  ctx.fillStyle = '#f2c28b'; circle(x + 15, y + 11, 11);
-  ctx.fillStyle = '#3b2416'; ctx.beginPath(); ctx.arc(x + 15, y + 9, 11.5, Math.PI, 0); ctx.fill();
-  ctx.fillRect(x + 15 - f * 11 - 2, y + 8, 4, 6);
+  // rabo de cavalo fica atrás do corpo
+  if (c.style === 'ponytail') { ctx.fillStyle = c.hair; ctx.beginPath(); ctx.ellipse(x + 15 - f * 13, y + 13 + Math.sin(G.frame * 0.3) * (moving ? 2 : 0), 5, 9, -f * 0.4, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = c.sleeve; ctx.fillRect(x + 1 + (air ? -2 : 0), y + 22 - (air ? 6 : 0) - sw * .3, 5, 14); ctx.fillRect(x + 24 + (air ? 2 : 0), y + 22 - (air ? 6 : 0) + sw * .3, 5, 14);
+  ctx.fillStyle = c.shirt; rr(x + 4, y + 20, 22, 20, 5); ctx.fill();
+  if (c.tie) { ctx.fillStyle = c.acc; ctx.beginPath(); ctx.moveTo(x + 13, y + 21); ctx.lineTo(x + 17, y + 21); ctx.lineTo(x + 15, y + 34); ctx.fill(); }
+  else { ctx.fillStyle = c.acc; ctx.fillRect(x + 8, y + 21, 14, 3); }
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 19 - (f < 0 ? 12 : 0), y + 25, 5, 6);
+  ctx.fillStyle = c.skin; circle(x + 15, y + 11, 11);
+  ctx.fillStyle = c.hair;
+  if (c.style === 'curly') {
+    for (const [dx, dy] of [[-9, 4], [-6, -1], [-1, -3], [5, -2], [9, 2], [-11, 9]]) circle(x + 15 + dx * (dx === -11 ? f : 1), y + 6 + dy, 5);
+  } else if (c.style === 'cap') {
+    ctx.beginPath(); ctx.arc(x + 15, y + 9, 11.5, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = c.acc; ctx.beginPath(); ctx.arc(x + 15, y + 7, 11.5, Math.PI, 0); ctx.fill();
+    ctx.fillRect(x + 15 + (f > 0 ? 4 : -16), y + 5, 12, 4);
+  } else {
+    ctx.beginPath(); ctx.arc(x + 15, y + 9, 11.5, Math.PI, 0); ctx.fill();
+    ctx.fillRect(x + 15 - f * 11 - 2, y + 8, 4, 6);
+  }
   ctx.fillStyle = '#111'; circle(x + 15 + f * 5, y + 12, 1.9);
+  if (c.glasses) { ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 15 + f * 5, y + 12, 3.6, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + 15 + f * 1.4, y + 12); ctx.lineTo(x + 15 - f * 4, y + 11); ctx.stroke(); }
   ctx.strokeStyle = '#8a4b2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 15 + f * 4, y + 15, 3, 0.2, Math.PI - 0.2); ctx.stroke();
+}
+
+function drawTag(p) {
+  const cx = p.x + p.w / 2, y = p.y - 22 + Math.sin(G.frame / 10) * 2;
+  ctx.fillStyle = PCOLORS[p.idx]; rr(cx - 15, y - 9, 30, 17, 8); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx - 5, y + 8); ctx.lineTo(cx + 5, y + 8); ctx.lineTo(cx, y + 13); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px ' + FONT; ctx.textAlign = 'center'; ctx.fillText('P' + (p.idx + 1), cx, y + 4);
 }
 
 function drawBoss() {
@@ -1242,7 +1344,7 @@ function render() {
   }
   if (G.star) drawStar(G.star);
   if (G.helper) drawHelper(G.helper);
-  if (G.p) drawPlayer(G.p);
+  if (G.ps) G.ps.forEach(p => { if (!p.respawn) { drawPlayer(p); if (G.ps.length > 1 && !p.dead) drawTag(p); } });
   for (const s of G.shots || []) {
     ctx.fillStyle = 'rgba(239,68,68,.3)'; circle(s.x, s.y, s.r + 5);
     ctx.fillStyle = '#ef4444'; circle(s.x, s.y, s.r);
@@ -1278,7 +1380,7 @@ function drawBanner() {
   let label, q;
   if (G.phase === 1) {
     const st = G.stations[G.cur];
-    if (!st || G.p.x < st.x - 3 * T) return; // só sobre chão firme, nunca cobrindo buracos
+    if (!st || Math.max(...active().map(p => p.x), G.p.x) < st.x - 3 * T) return; // só sobre chão firme, nunca cobrindo buracos
     label = 'DESAFIO ' + (G.cur + 1); q = st.q;
   } else {
     if (!G.boss || G.boss.dying || G.wait > 0) return;
@@ -1317,14 +1419,56 @@ function showStart() {
     '<div class="rules">' +
     '<div class="rule"><b>⬆️</b>Pule por baixo e <strong>bata a cabeça</strong> no bloco com a resposta certa</div>' +
     '<div class="rule"><b>🔓</b>Cada acerto abre o portão para seguir</div>' +
-    '<div class="rule"><b>❤️❤️❤️</b>3 vidas. Errar, cair no buraco ou levar dano tira uma</div>' +
+    '<div class="rule"><b>❤️❤️❤️</b>Vidas do time. Errar, cair no buraco ou levar dano tira uma</div>' +
     '<div class="rule"><b>👟</b>Pule em cima dos bugs para derrotá-los (+50)</div>' +
     '</div>' +
-    '<p class="keys-desk"><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> para andar, <kbd>↑</kbd> <kbd>W</kbd> ou <kbd>Espaço</kbd> para pular, <kbd>P</kbd> para pausar.</p>' +
+    '<p class="keys-desk">Jogue sozinho ou em <b>dupla no mesmo teclado</b>. <kbd>P</kbd> pausa.</p>' +
     '<p class="keys-touch">Use os botões ◀ ▶ e PULAR abaixo do jogo.</p>' +
-    '<button class="btn" id="ovBtn">▶ Começar a missão</button>',
+    '<button class="btn" id="ovBtn">▶ Escolher jogadores</button>',
+    () => showSelect()
+  );
+}
+
+// tela de seleção: 1 ou 2 jogadores e o personagem de cada um
+function showSelect() {
+  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  if (touch) SETUP.players = 1;
+  const cards = i => CHARS.map((c, k) => '<button class="char" data-p="' + i + '" data-c="' + k + '"><canvas width="96" height="112"></canvas><span>' + c.name + '</span></button>').join('');
+  overlay(
+    '<span class="tag">Antes de começar</span><h1>Escolha os jogadores</h1>' +
+    '<div class="modes"><button class="mode" data-m="1">👤 1 Jogador</button><button class="mode" data-m="2"' + (touch ? ' disabled title="Para jogar em dupla, use um teclado"' : '') + '>👥 2 Jogadores</button></div>' +
+    '<div class="pick"><div class="pick-h"><span class="ptag" style="background:' + PCOLORS[0] + '">Jogador 1</span><small id="k1"></small></div><div class="chars">' + cards(0) + '</div></div>' +
+    '<div class="pick" id="pick2"><div class="pick-h"><span class="ptag" style="background:' + PCOLORS[1] + '">Jogador 2</span><small><kbd>←</kbd> <kbd>→</kbd> andar, <kbd>↑</kbd> pular</small></div><div class="chars">' + cards(1) + '</div></div>' +
+    '<p id="note2"></p>' +
+    '<button class="btn" id="ovBtn">▶ Começar</button>',
     () => { newGame(); G.mode = 'play'; sfx.door(); }
   );
+  document.querySelectorAll('.char canvas').forEach(cvs => {
+    const c2 = cvs.getContext('2d'); c2.scale(2, 2);
+    const old = ctx; ctx = c2;
+    drawPlayerBody({ x: 9, y: 3, w: 30, h: 52, face: 1, vx: 0, on: true, ch: CHARS[+cvs.parentElement.dataset.c] });
+    ctx = old;
+  });
+  const refresh = () => {
+    document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', +b.dataset.m === SETUP.players));
+    $('pick2').style.display = SETUP.players === 2 ? '' : 'none';
+    $('k1').innerHTML = touch ? 'botões ◀ ▶ e PULAR' : SETUP.players === 2 ? '<kbd>A</kbd> <kbd>D</kbd> andar, <kbd>W</kbd> pular' : '<kbd>←</kbd> <kbd>→</kbd> andar, <kbd>↑</kbd> ou <kbd>Espaço</kbd> pular';
+    $('note2').textContent = SETUP.players === 2 ? 'Os dois jogam juntos no mesmo teclado. Vidas (5) e pontos são do time.'
+      : touch ? 'No celular dá para jogar com 1 jogador.' : 'Chame alguém e escolha 2 Jogadores para jogar em dupla!';
+    document.querySelectorAll('.char').forEach(b => {
+      const pi = +b.dataset.p, k = +b.dataset.c;
+      b.style.setProperty('--pc', PCOLORS[pi]);
+      b.classList.toggle('sel', SETUP.chars[pi] === k);
+      b.classList.toggle('taken', SETUP.players === 2 && SETUP.chars[1 - pi] === k);
+    });
+  };
+  document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => { SETUP.players = +b.dataset.m; refresh(); }));
+  document.querySelectorAll('.char').forEach(b => b.addEventListener('click', () => {
+    const pi = +b.dataset.p, k = +b.dataset.c;
+    if (SETUP.chars[1 - pi] === k) SETUP.chars[1 - pi] = SETUP.chars[pi]; // se o colega já tinha esse, os dois trocam
+    SETUP.chars[pi] = k; refresh();
+  }));
+  refresh();
 }
 
 function bossIntro() {
@@ -1347,20 +1491,22 @@ function endGame(won) {
     G.score += bonus; renderHud();
     startConfetti(); playVictory();
     overlay(
-      '<span class="tag">Missão cumprida</span><h1>Você é o Assistente Lendário!</h1><div class="big">🏆</div>' +
+      '<span class="tag">Missão cumprida</span><h1>' + (G.ps.length > 1 ? 'Vocês são os Assistentes Lendários!' : 'Você é o Assistente Lendário!') + '</h1><div class="big">🏆</div>' +
       '<p>O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>' +
       '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '<div>❤️ Bônus de vidas: +' + bonus + '</div></div>' +
-      '<button class="btn" id="ovBtn">🔁 Jogar de novo</button>',
+      '<button class="btn" id="ovBtn">🔁 Jogar de novo</button><button class="btn2" id="swapBtn">👥 Trocar jogadores</button>',
       () => { stopConfetti(); newGame(); G.mode = 'play'; }
     );
+    $('swapBtn').addEventListener('click', () => { stopConfetti(); showSelect(); });
   } else {
     overlay(
       '<span class="tag">Game over</span><h1>O Caos venceu desta vez...</h1><div class="big">💀</div>' +
       '<p>Suas vidas acabaram. Leia as explicações no quadro e tente de novo: todo assistente lendário já errou uma planilha!</p>' +
       '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '</div>' +
-      '<button class="btn" id="ovBtn">🔁 Tentar novamente</button>',
+      '<button class="btn" id="ovBtn">🔁 Tentar novamente</button><button class="btn2" id="swapBtn">👥 Trocar jogadores</button>',
       () => { newGame(); G.mode = 'play'; }
     );
+    $('swapBtn').addEventListener('click', () => showSelect());
   }
 }
 
