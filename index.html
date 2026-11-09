@@ -121,10 +121,10 @@
   .btn:hover { transform: translateY(-3px) scale(1.03); }
   .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8336a; }
   @keyframes pulse { 50% { box-shadow: 0 6px 0 #b8336a, 0 0 0 12px rgba(255,61,127,.15); } }
-  .video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; margin: 4px 0 10px; background: #000; }
-  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .song { display: inline-block; margin: 0 0 16px; padding: 10px 18px; border-radius: 999px; background: #f5f0ff; color: var(--purple); font-weight: bold; text-decoration: none; border: 2px solid #e4d9ff; }
-  .song:hover { background: #ebe2ff; }
+  #songBox { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: min(356px, calc(100vw - 32px)); background: #000; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.6); border: 3px solid var(--yellow); animation: enter .4s ease-out; }
+  #songBox .bar { display: flex; justify-content: space-between; align-items: center; background: var(--yellow); color: var(--ink); font-weight: bold; font-size: .85rem; padding: 4px 6px 6px 10px; }
+  #songBox button { border: none; background: rgba(0,0,0,.12); border-radius: 8px; cursor: pointer; font-weight: bold; padding: 2px 8px; font-family: inherit; }
+  #songBox iframe { display: block; width: 100%; aspect-ratio: 16 / 9; min-height: 190px; border: 0; }
   .final { font-size: 2.4rem; font-weight: bold; color: var(--pink); margin: 6px 0; }
   .stats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 20px; }
   .stats div { background: #f5f0ff; padding: 8px 12px; border-radius: 10px; font-weight: bold; font-size: .9rem; }
@@ -1291,16 +1291,13 @@ function endGame(won) {
   if (won) {
     const bonus = G.lives * 200;
     G.score += bonus; renderHud();
-    sfx.win(); startConfetti();
+    startConfetti(); showSong();
     overlay(
       '<span class="tag">Missão cumprida</span><h1>Você é o Assistente Lendário!</h1><div class="big">🏆</div>' +
       '<p>O Caos dos Dados foi derrotado, as planilhas estão em ordem e o relatório foi entregue no prazo.</p>' +
       '<div class="final">' + G.score + ' pts</div><div class="stats">' + stats + '<div>❤️ Bônus de vidas: +' + bonus + '</div></div>' +
-      '<p><b>🎵 Música da vitória: aperte o play!</b></p>' +
-      '<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/9wg3v-01yKQ" title="Harry Styles - Kiwi" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>' +
-      '<a class="song" href="https://www.youtube.com/watch?v=9wg3v-01yKQ" target="_blank" rel="noopener">Não carregou? Abrir no YouTube</a><br>' +
       '<button class="btn" id="ovBtn">🔁 Jogar de novo</button>',
-      () => { stopConfetti(); newGame(); G.mode = 'play'; }
+      () => { stopConfetti(); hideSong(); newGame(); G.mode = 'play'; }
     );
   } else {
     overlay(
@@ -1312,6 +1309,18 @@ function endGame(won) {
     );
   }
 }
+
+/* música da vitória: player oficial do YouTube no canto da tela, começa sozinho */
+function showSong() {
+  hideSong();
+  const box = document.createElement('div');
+  box.id = 'songBox';
+  box.innerHTML = '<div class="bar"><span>🎵 Harry Styles - Kiwi</span><button title="Fechar">✕</button></div>' +
+    '<iframe src="https://www.youtube-nocookie.com/embed/9wg3v-01yKQ?autoplay=1&playsinline=1" title="Harry Styles - Kiwi" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  box.querySelector('button').addEventListener('click', hideSong);
+  document.body.appendChild(box);
+}
+function hideSong() { const b = $('songBox'); if (b) b.remove(); }
 
 /* =========================================================
    CONFETES
